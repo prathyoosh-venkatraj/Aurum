@@ -182,6 +182,19 @@
 
 </main>
 
+<div id="mobile-block" style="display:none; position:fixed; inset:0; background:#000; z-index:9999; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px; font-family:'Montserrat',sans-serif;">
+  <div style="font-size:2rem; font-weight:900; color:#F5C518; letter-spacing:4px; margin-bottom:16px;">AURUM</div>
+  <div style="color:#888; font-size:0.9rem; line-height:1.7; max-width:280px;">
+    Aurum is designed for desktop use.<br>Please open this page on a larger screen.
+  </div>
+</div>
+<script>
+  (function(){
+    function check(){ document.getElementById('mobile-block').style.display = window.innerWidth < 900 ? 'flex' : 'none'; }
+    check();
+    window.addEventListener('resize', check);
+  })();
+</script>
 <script type="module" src="aurum.js"></script>
 </body>
 </html>
