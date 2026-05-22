@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURUM — Portfolio Optimisation Engine</title>
+  <meta name="description" content="Aurum is an institutional-grade portfolio optimisation engine. Build efficient frontiers across 200 global equities using Markowitz mean-variance optimisation.">
+  <meta property="og:title" content="AURUM — Portfolio Optimisation Engine">
+  <meta property="og:description" content="Construct and optimise multi-asset portfolios across 11 GICS sectors. By NovaSect.">
+  <meta property="og:type" content="website">
+  <meta name="robots" content="index, follow">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo-block">
+    <span class="logo">AURUM</span>
+    <span class="logo-sub">Portfolio Optimisation Engine</span>
+  </div>
+  <a href="https://novasect.space" class="novasect-badge" target="_blank" rel="noopener noreferrer">
+    An instrument by NovaSect ↗
+  </a>
+</header>
+
+<main class="app-layout">
+
+  <!-- ── Control Panel ───────────────────────────────────────── -->
+  <aside class="control-panel">
+
+    <!-- Filters -->
+    <div class="panel-section">
+      <div class="section-label">Sector</div>
+      <div class="filter-row" id="sector-filters">
+        <button class="chip all active" data-filter="sector" data-value="all">All</button>
+        <button class="chip" data-filter="sector" data-value="Information Technology">Tech</button>
+        <button class="chip" data-filter="sector" data-value="Health Care">Health</button>
+        <button class="chip" data-filter="sector" data-value="Financials">Finance</button>
+        <button class="chip" data-filter="sector" data-value="Consumer Discretionary">Cons. D</button>
+        <button class="chip" data-filter="sector" data-value="Consumer Staples">Cons. S</button>
+        <button class="chip" data-filter="sector" data-value="Communication Services">Comms</button>
+        <button class="chip" data-filter="sector" data-value="Materials">Materials</button>
+        <button class="chip" data-filter="sector" data-value="Real Estate">RE</button>
+        <button class="chip" data-filter="sector" data-value="Energy">Energy</button>
+        <button class="chip" data-filter="sector" data-value="Utilities">Utilities</button>
+        <button class="chip" data-filter="sector" data-value="Industrials">Industrials</button>
+      </div>
+
+      <div class="section-label" style="margin-top:12px">Region</div>
+      <div class="filter-row" id="region-filters">
+        <button class="chip all active" data-filter="region" data-value="all">All</button>
+        <button class="chip" data-filter="region" data-value="US">US</button>
+        <button class="chip" data-filter="region" data-value="EU">EU</button>
+        <button class="chip" data-filter="region" data-value="APAC">APAC</button>
+        <button class="chip" data-filter="region" data-value="EM">EM</button>
+      </div>
+
+      <div class="section-label" style="margin-top:12px">Market Cap</div>
+      <div class="filter-row" id="cap-filters">
+        <button class="chip all active" data-filter="cap" data-value="all">All</button>
+        <button class="chip" data-filter="cap" data-value="Mega">Mega (&gt;$200B)</button>
+        <button class="chip" data-filter="cap" data-value="Large">Large</button>
+        <button class="chip" data-filter="cap" data-value="Mid">Mid</button>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="panel-section">
+      <div class="section-label">Add Position <span class="ticker-count-label" id="ticker-count-label">0 / 30</span></div>
+      <div class="search-wrapper">
+        <input
+          type="text"
+          id="ticker-search"
+          class="search-input"
+          placeholder="Search ticker or company name…"
+          autocomplete="off"
+          spellcheck="false"
+        >
+      </div>
+      <div id="search-results" class="search-results"></div>
+    </div>
+
+    <!-- Selected portfolio -->
+    <div class="panel-section" style="flex:1; min-height:80px;">
+      <div class="section-label">Portfolio</div>
+      <div id="selected-list" class="selected-list">
+        <div class="empty-hint" id="portfolio-empty-hint">No positions added yet.</div>
+      </div>
+    </div>
+
+    <!-- Optimisation mode -->
+    <div class="panel-section">
+      <div class="section-label">Optimisation Mode</div>
+      <div class="radio-group">
+        <label class="radio-option">
+          <input type="radio" name="optMode" value="maxSharpe" checked>
+          <span class="radio-dot"></span>
+          <span class="radio-label">Maximum Sharpe Ratio</span>
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="optMode" value="minVariance">
+          <span class="radio-dot"></span>
+          <span class="radio-label">Minimum Variance</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Run -->
+    <button class="run-button" id="run-btn" disabled>Optimise Portfolio</button>
+    <div class="status-line" id="status-line"></div>
+
+  </aside>
+
+  <!-- ── Results Panel ───────────────────────────────────────── -->
+  <div class="results-panel" id="results-panel">
+
+    <!-- Empty state -->
+    <div class="empty-state" id="empty-state">
+      <div class="empty-state-logo">AU</div>
+      <div class="empty-state-text">Add at least 2 positions to begin optimisation</div>
+    </div>
+
+    <!-- Results (hidden until first run) -->
+    <div id="results-content" style="display:none; flex-direction:column;">
+
+      <!-- Efficient Frontier -->
+      <div class="frontier-card">
+        <div class="panel-card-header">Efficient Frontier</div>
+        <div class="frontier-chart-wrap">
+          <canvas id="frontier-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">Portfolio Return</div>
+          <div class="metric-value" id="metric-return">—</div>
+          <div class="metric-sub">Annualised</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Portfolio Risk</div>
+          <div class="metric-value" id="metric-risk">—</div>
+          <div class="metric-sub">Ann. Std Dev</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Sharpe Ratio</div>
+          <div class="metric-value" id="metric-sharpe">—</div>
+          <div class="metric-sub">vs 10Y UST</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Max Drawdown</div>
+          <div class="metric-value negative" id="metric-maxdd">—</div>
+          <div class="metric-sub">Historical 1Y</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">VaR (95%)</div>
+          <div class="metric-value negative" id="metric-var">—</div>
+          <div class="metric-sub">1-day parametric</div>
+        </div>
+      </div>
+
+      <!-- Weight allocation + Correlation heatmap -->
+      <div class="bottom-panels">
+        <div class="weight-card">
+          <div class="panel-card-header">Optimal Allocation</div>
+          <div class="weight-chart-wrap">
+            <canvas id="weight-chart"></canvas>
+          </div>
+        </div>
+        <div class="heatmap-card">
+          <div class="panel-card-header">Correlation Matrix</div>
+          <div class="heatmap-wrap" id="heatmap-wrap">
+            <canvas id="heatmap-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /results-content -->
+  </div><!-- /results-panel -->
+
+</main>
+
+<script type="module" src="aurum.js"></script>
+</body>
+</html>

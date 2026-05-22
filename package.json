@@ -1,0 +1,11 @@
+{
+  "name": "aurum-portfolio-engine",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.x"
+  },
+  "scripts": {
+    "verify-tickers": "node scripts/verify-tickers.mjs"
+  }
+}
