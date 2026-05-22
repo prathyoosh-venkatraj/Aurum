@@ -303,6 +303,88 @@ export function drawHeatmap(result) {
   }
 }
 
+// ── Correlation Insights ───────────────────────────────────────────────────
+
+export function drawCorrelationInsights(result) {
+  const el = document.getElementById('correlation-insights');
+  if (!el) return;
+
+  const { correlation, tickers } = result;
+  const N = tickers.length;
+  if (N < 2) { el.innerHTML = ''; return; }
+
+  const pairs = [];
+  for (let i = 0; i < N; i++)
+    for (let j = i + 1; j < N; j++)
+      pairs.push({ i, j, r: correlation[i][j] });
+
+  const avgCorr = pairs.reduce((s, p) => s + p.r, 0) / pairs.length;
+  const highPair = pairs.reduce((a, b) => b.r > a.r ? b : a);
+  const lowPair  = pairs.reduce((a, b) => b.r < a.r ? b : a);
+
+  let score, scoreLabel, scoreColor;
+  if      (avgCorr < 0.15) { score = 5; scoreLabel = 'Excellent'; scoreColor = '#39FF14'; }
+  else if (avgCorr < 0.30) { score = 4; scoreLabel = 'Good';      scoreColor = '#7FFF00'; }
+  else if (avgCorr < 0.50) { score = 3; scoreLabel = 'Moderate';  scoreColor = '#F5C518'; }
+  else if (avgCorr < 0.70) { score = 2; scoreLabel = 'Low';       scoreColor = '#FF8C00'; }
+  else                     { score = 1; scoreLabel = 'Poor';       scoreColor = '#FF4D4D'; }
+
+  const stars = '●'.repeat(score) + '○'.repeat(5 - score);
+
+  let overallText;
+  if (avgCorr < 0.15) {
+    overallText = `Your assets move largely independently of one another — strong diversification. When one position falls, others are unlikely to follow, which cushions the portfolio during market stress.`;
+  } else if (avgCorr < 0.30) {
+    overallText = `Good diversification. The assets share a modest positive relationship but don't move in lockstep. You capture most of the protective effect of holding multiple positions.`;
+  } else if (avgCorr < 0.50) {
+    overallText = `Moderate diversification. Assets move in the same direction roughly half the time. The portfolio offers some single-stock protection, but a broad market shock would likely affect most holdings at once.`;
+  } else if (avgCorr < 0.70) {
+    overallText = `The assets tend to rise and fall together. Adding positions from different sectors or geographies could significantly improve resilience against a market-wide downturn.`;
+  } else {
+    overallText = `The assets move very closely together, offering limited diversification benefit. Consider including holdings from different industries, regions, or asset classes to reduce concentration risk.`;
+  }
+
+  const hiA = tickers[highPair.i], hiB = tickers[highPair.j], hiR = highPair.r;
+  let strongText;
+  if (hiR > 0.8) {
+    strongText = `${hiA} and ${hiB} (${hiR.toFixed(2)}) are extremely tightly linked — they effectively move as one. Holding both adds almost no diversification benefit over holding either alone.`;
+  } else if (hiR > 0.6) {
+    strongText = `${hiA} and ${hiB} (${hiR.toFixed(2)}) move together most of the time. A shock to their shared industry or region would likely hit both positions simultaneously.`;
+  } else {
+    strongText = `${hiA} and ${hiB} (${hiR.toFixed(2)}) are the most correlated pair in this portfolio. At this level the relationship is still manageable and does not significantly undermine diversification.`;
+  }
+
+  const loA = tickers[lowPair.i], loB = tickers[lowPair.j], loR = lowPair.r;
+  let diversifierText;
+  if (loR < 0) {
+    diversifierText = `${loA} and ${loB} (${loR.toFixed(2)}) tend to move in opposite directions — a natural hedge. When one falls, the other often rises, actively dampening overall portfolio volatility.`;
+  } else if (loR < 0.2) {
+    diversifierText = `${loA} and ${loB} (${loR.toFixed(2)}) are nearly uncorrelated, making them the strongest diversification pair here. Together they contribute meaningfully to reducing overall volatility.`;
+  } else {
+    diversifierText = `${loA} and ${loB} (${loR.toFixed(2)}) have the weakest relationship in the portfolio, providing the most diversification benefit among current holdings — though they still share some directional tendency.`;
+  }
+
+  el.innerHTML = `
+    <div class="ci-score-row">
+      <span class="ci-label">Diversification</span>
+      <span class="ci-stars" style="color:${scoreColor}">${stars}</span>
+      <span class="ci-score-label" style="color:${scoreColor}">${scoreLabel}</span>
+    </div>
+    <div class="ci-avg">Avg pairwise correlation&nbsp;<span class="ci-avg-val">${avgCorr.toFixed(2)}</span></div>
+    <div class="ci-section">
+      <div class="ci-section-title">Portfolio Overview</div>
+      <div class="ci-text">${overallText}</div>
+    </div>
+    <div class="ci-section">
+      <div class="ci-section-title">Strongest Link</div>
+      <div class="ci-text">${strongText}</div>
+    </div>
+    <div class="ci-section">
+      <div class="ci-section-title">Best Diversifier</div>
+      <div class="ci-text">${diversifierText}</div>
+    </div>`;
+}
+
 // ── Black-Litterman Return Comparison ─────────────────────────────────────
 
 /**
@@ -394,6 +476,7 @@ export function showResults(result) {
   drawMetrics(result);
   drawWeightChart(result);
   drawHeatmap(result);
+  drawCorrelationInsights(result);
   drawBLPanel(result);
 }
 

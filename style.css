@@ -684,6 +684,76 @@ input { font-family: var(--font-mono); }
   color: var(--text-muted);
 }
 
+/* ── Correlation insights ────────────────────────────────────────────────── */
+.heatmap-insights-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.heatmap-wrap { flex-shrink: 0; }
+.correlation-insights {
+  flex: 1;
+  min-width: 0;
+  border-left: 1px solid var(--border);
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ci-score-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.ci-label {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  flex-shrink: 0;
+}
+.ci-stars {
+  font-size: 0.7rem;
+  letter-spacing: 3px;
+  flex-shrink: 0;
+}
+.ci-score-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ci-avg {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-top: -6px;
+}
+.ci-avg-val {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.ci-section { display: flex; flex-direction: column; gap: 6px; }
+.ci-section-title {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--gold-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.ci-text {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--text-dim);
+  line-height: 1.65;
+}
+
 /* ── BL decomposition panel ───────────────────────────────────────────────── */
 .bl-panel {
   padding: 20px 24px;
