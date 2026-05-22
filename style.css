@@ -147,9 +147,10 @@ input { font-family: var(--font-mono); }
   white-space: nowrap;
 }
 .chip:hover { border-color: var(--gold-dim); color: var(--gold-dim); }
-.chip.active { border-color: var(--gold); color: var(--gold); background: var(--gold-glow); }
+.chip:active { transform: scale(0.95); }
+.chip.active { border-color: var(--gold); color: var(--gold); background: linear-gradient(135deg, rgba(245,197,24,0.15), rgba(245,197,24,0.04)); }
 .chip.all { border-color: var(--border); }
-.chip.all.active { border-color: var(--gold); color: var(--gold); background: var(--gold-glow); }
+.chip.all.active { border-color: var(--gold); color: var(--gold); background: linear-gradient(135deg, rgba(245,197,24,0.15), rgba(245,197,24,0.04)); }
 
 /* Search */
 .search-wrapper {
@@ -238,6 +239,10 @@ input { font-family: var(--font-mono); }
   overflow-y: auto;
 }
 
+@keyframes tickerSlideIn {
+  from { opacity: 0; transform: translateY(-6px); max-height: 0; padding-top: 0; padding-bottom: 0; }
+  to   { opacity: 1; transform: translateY(0);    max-height: 60px; padding-top: 7px; padding-bottom: 7px; }
+}
 .selected-item {
   display: flex;
   align-items: center;
@@ -247,6 +252,8 @@ input { font-family: var(--font-mono); }
   border-radius: var(--radius);
   padding: 7px 10px;
   transition: border-color 0.15s;
+  animation: tickerSlideIn 0.18s ease-out both;
+  overflow: hidden;
 }
 .selected-item:hover { border-color: var(--gold-border); }
 
@@ -282,7 +289,7 @@ input { font-family: var(--font-mono); }
 .ticker-count-label {
   font-family: var(--font-mono);
   font-size: 0.6rem;
-  color: var(--gold);
+  color: var(--gold-dim);
   margin-left: 8px;
 }
 
@@ -344,13 +351,15 @@ input { font-family: var(--font-mono); }
   letter-spacing: 0.14em;
   text-transform: uppercase;
   border-radius: var(--radius);
-  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s, letter-spacing 0.15s;
   border: none;
+  box-shadow: 0 0 12px rgba(245,197,24,0.12);
 }
 .run-button:hover:not(:disabled) {
   background: #FFD700;
-  box-shadow: 0 0 20px rgba(245,197,24,0.35);
+  box-shadow: 0 0 22px rgba(245,197,24,0.38);
   transform: translateY(-1px);
+  letter-spacing: 0.18em;
 }
 .run-button:active:not(:disabled) { transform: translateY(0); }
 .run-button:disabled {
@@ -358,6 +367,7 @@ input { font-family: var(--font-mono); }
   color: var(--text-muted);
   cursor: not-allowed;
   border: 1px solid var(--border);
+  box-shadow: none;
 }
 
 /* Status line */
