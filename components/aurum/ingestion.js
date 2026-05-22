@@ -205,10 +205,15 @@ export async function fetchRiskFreeRate() {
     if (Date.now() - fetchedAt < CACHE_TTL) return value;
   }
 
-  const res = await fetch('/api/fred-proxy?series_id=DGS10');
-  if (!res.ok) {
-    console.warn('Could not fetch risk-free rate; defaulting to 4.5%');
-    return 0.045;
+  let res;
+  try { res = await fetch('/api/fred-proxy?series_id=DGS10'); } catch { res = null; }
+
+  if (!res || !res.ok) {
+    console.warn('Could not fetch risk-free rate from FRED; defaulting to 4.5%');
+    const fallback = 0.045;
+    // Cache the fallback for 1 hour so repeated runs don't re-hit a failing endpoint
+    sessionStorage.setItem(cacheKey, JSON.stringify({ value: fallback, fetchedAt: Date.now() - (CACHE_TTL - 3600000) }));
+    return fallback;
   }
   const data = await res.json();
   const value = (data.value || 4.5) / 100;

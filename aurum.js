@@ -45,6 +45,14 @@ function restorePortfolio() {
   }
 }
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function formatDate(dateStr) {
+  const [y, m, d] = dateStr.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(d, 10)} ${months[parseInt(m, 10) - 1]} ${y}`;
+}
+
 // ── Status line ────────────────────────────────────────────────────────────
 
 function setStatus(msg, type = '') {
@@ -408,15 +416,24 @@ async function runOptimisation() {
     const optResult = e.data.result;
     state.lastResult = optResult;
 
+    // Data freshness label
+    const lastDate = alignedData.dates[alignedData.dates.length - 1];
+    const freshnessEl = document.getElementById('data-freshness');
+    if (freshnessEl && lastDate) freshnessEl.textContent = `Data as of ${formatDate(lastDate)}`;
+
     const modeTag = optResult.mode === 'blackLitterman' ? 'BL' :
                     optResult.mode === 'minVariance'    ? 'MinVar' : 'MaxSharpe';
 
-    setStatusOk(
+    let statusMsg =
       `Done [${modeTag}] — ${optResult.tickers.length} assets · ` +
       `${optResult.anchors.maxSharpe.sharpe.toFixed(2)} peak Sharpe · ` +
-      `${alignedData.alignedReturns.length} trading days`
-    );
+      `${alignedData.alignedReturns.length} trading days`;
 
+    if (droppedViews.length > 0) {
+      statusMsg += ` · ${droppedViews.length} view(s) skipped (tickers unavailable)`;
+    }
+
+    setStatusOk(statusMsg);
     showResults(optResult);
   };
 
@@ -475,7 +492,11 @@ function subscribeStateEvents() {
     renderPortfolio();
     updateCountLabel();
     updateRunButton();
-    if (state.selectedTickers.length < state.MIN_TICKERS) hideResults();
+    if (state.selectedTickers.length < state.MIN_TICKERS) {
+      hideResults();
+      const freshnessEl = document.getElementById('data-freshness');
+      if (freshnessEl) freshnessEl.textContent = '';
+    }
     if (state.optimisationMode === 'blackLitterman') renderViews();
   });
 

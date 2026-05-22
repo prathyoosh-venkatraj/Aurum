@@ -154,7 +154,10 @@
 
       <!-- Efficient Frontier -->
       <div class="frontier-card">
-        <div class="panel-card-header">Efficient Frontier</div>
+        <div class="panel-card-header" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Efficient Frontier</span>
+          <span id="data-freshness" class="data-freshness"></span>
+        </div>
         <div class="frontier-chart-wrap">
           <canvas id="frontier-chart"></canvas>
         </div>
