@@ -28,7 +28,7 @@ export function drawFrontier(result) {
   if (!ctx) return;
   if (_frontierChart) { _frontierChart.destroy(); _frontierChart = null; }
 
-  const { frontier, anchors, tickers, mu, Sigma, optimal, mode } = result;
+  const { frontier, anchors, tickers, mu, Sigma, optimal, mode, rf } = result;
 
   const frontierData = frontier.map(p => ({ x: p.risk * 100, y: p.return * 100 }));
   const assetData    = tickers.map((t, i) => ({
@@ -44,8 +44,35 @@ export function drawFrontier(result) {
   const modeLabel = mode === 'minVariance' ? 'Optimal (MinVar)' :
                     mode === 'blackLitterman' ? 'Optimal (BL)' : 'Optimal (MaxSharpe)';
 
+  // Capital Market Line: extends from the risk-free rate through the Max Sharpe point
+  const rfPct    = (rf || 0.045) * 100;
+  const cmlSlope = msPoint.x > 0 ? (msPoint.y - rfPct) / msPoint.x : 0;
+  const cmlMaxX  = Math.max(...assetData.map(a => a.x), msPoint.x) * 1.25;
+  const cmlData  = [{ x: 0, y: rfPct }, { x: cmlMaxX, y: rfPct + cmlSlope * cmlMaxX }];
+
+  // Plugin: draw ticker symbols next to each individual asset dot
+  const tickerLabelPlugin = {
+    id: 'tickerLabels',
+    afterDatasetsDraw(chart) {
+      const idx = chart.data.datasets.findIndex(d => d._assetLayer);
+      if (idx < 0) return;
+      const meta = chart.getDatasetMeta(idx);
+      const c = chart.ctx;
+      c.save();
+      c.font = '8.5px "JetBrains Mono", monospace';
+      c.textBaseline = 'middle';
+      c.fillStyle = '#999999';
+      meta.data.forEach((pt, i) => {
+        const lbl = assetData[i]?.label;
+        if (lbl) c.fillText(lbl, pt.x + 8, pt.y - 4);
+      });
+      c.restore();
+    }
+  };
+
   _frontierChart = new Chart(ctx, {
     type: 'scatter',
+    plugins: [tickerLabelPlugin],
     data: {
       datasets: [
         {
@@ -53,21 +80,35 @@ export function drawFrontier(result) {
           data: frontierData,
           type: 'line',
           borderColor: GOLD,
-          borderWidth: 2,
-          backgroundColor: GOLD_FILL,
+          borderWidth: 2.5,
+          backgroundColor: 'rgba(245,197,24,0.05)',
+          fill: 'origin',
+          pointRadius: 0,
+          tension: 0.35,
+          order: 4
+        },
+        {
+          label: 'Capital Market Line',
+          data: cmlData,
+          type: 'line',
+          borderColor: 'rgba(245,197,24,0.28)',
+          borderWidth: 1,
+          borderDash: [6, 5],
+          backgroundColor: 'transparent',
           fill: false,
           pointRadius: 0,
-          tension: 0.3,
-          order: 3
+          tension: 0,
+          order: 5
         },
         {
           label: 'Individual Assets',
+          _assetLayer: true,
           data: assetData,
-          backgroundColor: TEXT_MUTED,
-          borderColor: BORDER,
+          backgroundColor: '#5A5A5A',
+          borderColor: '#383838',
           borderWidth: 1,
           pointRadius: 5,
-          pointHoverRadius: 7,
+          pointHoverRadius: 8,
           order: 2
         },
         {
@@ -75,7 +116,7 @@ export function drawFrontier(result) {
           data: [mvPoint],
           backgroundColor: '#4488FF',
           borderColor: '#4488FF',
-          pointRadius: 7,
+          pointRadius: 8,
           pointStyle: 'triangle',
           order: 1
         },
@@ -84,7 +125,7 @@ export function drawFrontier(result) {
           data: [msPoint],
           backgroundColor: GREEN,
           borderColor: GREEN,
-          pointRadius: 7,
+          pointRadius: 8,
           pointStyle: 'star',
           order: 1
         },
@@ -94,7 +135,7 @@ export function drawFrontier(result) {
           backgroundColor: GOLD,
           borderColor: '#000',
           borderWidth: 2,
-          pointRadius: 10,
+          pointRadius: 11,
           pointStyle: 'circle',
           order: 0
         }
@@ -107,7 +148,13 @@ export function drawFrontier(result) {
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { color: TEXT_DIM, font: { family: "'JetBrains Mono', monospace", size: 10 }, boxWidth: 12, padding: 14 }
+          labels: {
+            color: TEXT_DIM,
+            font: { family: "'JetBrains Mono', monospace", size: 10 },
+            boxWidth: 12,
+            padding: 14,
+            filter: item => item.text !== 'Capital Market Line' || true
+          }
         },
         tooltip: {
           backgroundColor: '#111',
@@ -118,11 +165,22 @@ export function drawFrontier(result) {
           titleFont: { family: "'JetBrains Mono', monospace", size: 11 },
           bodyFont:  { family: "'JetBrains Mono', monospace", size: 10 },
           callbacks: {
+            title(items) {
+              const d = items[0]?.raw;
+              if (d?.label) return d.label;
+              return items[0]?.dataset?.label || '';
+            },
             label(ctx) {
               const d = ctx.raw;
-              let base = `Risk: ${d.x.toFixed(1)}%  Return: ${d.y.toFixed(1)}%`;
-              if (d.label) base = `${d.label} — ${base}`;
-              return base;
+              const sharpe = rfPct > 0
+                ? ((d.y - rfPct) / (d.x || 1)).toFixed(2)
+                : null;
+              const lines = [
+                `Return: ${d.y.toFixed(1)}%`,
+                `Risk:   ${d.x.toFixed(1)}%`
+              ];
+              if (sharpe !== null && ctx.dataset._assetLayer) lines.push(`Sharpe: ${sharpe}`);
+              return lines;
             }
           }
         }
