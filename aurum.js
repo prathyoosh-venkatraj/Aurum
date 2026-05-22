@@ -23,6 +23,28 @@ async function loadUniverse() {
   state.universe = data.tickers;
 }
 
+// ── Portfolio persistence ──────────────────────────────────────────────────
+
+const PORTFOLIO_KEY = 'aurum_portfolio_v1';
+
+function savePortfolio() {
+  try {
+    localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(state.selectedTickers));
+  } catch { /* storage quota or private mode */ }
+}
+
+function restorePortfolio() {
+  try {
+    const saved = localStorage.getItem(PORTFOLIO_KEY);
+    if (!saved) return;
+    const tickers = JSON.parse(saved);
+    if (!Array.isArray(tickers)) return;
+    tickers.forEach(t => { if (state.universe[t]) state.selectedTickers.push(t); });
+  } catch {
+    localStorage.removeItem(PORTFOLIO_KEY);
+  }
+}
+
 // ── Status line ────────────────────────────────────────────────────────────
 
 function setStatus(msg, type = '') {
@@ -353,11 +375,26 @@ async function runOptimisation() {
   const worker       = getWorker();
   const sectorGroups = buildSectorGroups(alignedData.tickers);
 
-  // Filter views to only include tickers in the aligned result
+  // Warn if per-asset cap is tighter than 1/N (infeasible — engine will auto-relax)
+  const N = alignedData.tickers.length;
+  if (state.constraints.maxWeight < 1 / N) {
+    const minFeasible = Math.ceil(100 / N);
+    setStatus(`Max position (${Math.round(state.constraints.maxWeight * 100)}%) below minimum feasible ${minFeasible}% for ${N} assets — relaxed automatically.`, 'loading');
+    await new Promise(r => setTimeout(r, 1800));
+  }
+
+  // Filter views to only include tickers present in aligned result
+  const droppedViews = state.views.filter(v =>
+    !alignedData.tickers.includes(v.ticker) ||
+    (v.type === 'relative' && !alignedData.tickers.includes(v.ticker2))
+  );
   const validViews = state.views.filter(v =>
     alignedData.tickers.includes(v.ticker) &&
     (v.type !== 'relative' || alignedData.tickers.includes(v.ticker2))
   );
+  if (droppedViews.length > 0) {
+    console.warn(`${droppedViews.length} view(s) dropped — tickers not in aligned data:`, droppedViews.map(v => v.ticker));
+  }
 
   worker.onmessage = (e) => {
     state.isRunning = false;
@@ -434,11 +471,11 @@ function initRunButton() {
 
 function subscribeStateEvents() {
   on('portfolioChanged', () => {
+    savePortfolio();
     renderPortfolio();
     updateCountLabel();
     updateRunButton();
     if (state.selectedTickers.length < state.MIN_TICKERS) hideResults();
-    // Refresh view selectors to reflect new ticker list
     if (state.optimisationMode === 'blackLitterman') renderViews();
   });
 
@@ -464,6 +501,7 @@ function subscribeStateEvents() {
     return;
   }
 
+  restorePortfolio();
   initFilterChips();
   initModeRadios();
   initConstraintSliders();
@@ -471,6 +509,7 @@ function subscribeStateEvents() {
   initSearch();
   initRunButton();
   subscribeStateEvents();
+  renderPortfolio();
   updateRunButton();
   updateCountLabel();
 })();

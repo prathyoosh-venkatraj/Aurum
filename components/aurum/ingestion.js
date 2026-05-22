@@ -52,12 +52,28 @@ async function idbPut(record) {
 
 async function fetchTickerHistory(ticker) {
   const cached = await idbGet(ticker);
-  if (cached && (Date.now() - cached.fetchedAt) < CACHE_TTL) {
+  if (cached && typeof cached.fetchedAt === 'number' && (Date.now() - cached.fetchedAt) < CACHE_TTL) {
     return { ticker, dates: cached.dates, prices: cached.prices };
   }
 
-  const res = await fetch(`/api/yahoo-proxy?symbol=${encodeURIComponent(ticker)}&mode=history&range=1y`);
-  if (!res.ok) throw new Error(`Yahoo proxy returned ${res.status} for ${ticker}`);
+  let res;
+  try {
+    res = await fetch(`/api/yahoo-proxy?symbol=${encodeURIComponent(ticker)}&mode=history&range=1y`);
+  } catch (networkErr) {
+    if (cached) {
+      console.warn(`Network error for ${ticker}; using stale cache (${Math.round((Date.now() - cached.fetchedAt) / 60000)}min old)`);
+      return { ticker, dates: cached.dates, prices: cached.prices };
+    }
+    throw new Error(`Network error fetching ${ticker}: ${networkErr.message}`);
+  }
+
+  if (!res.ok) {
+    if (cached) {
+      console.warn(`Yahoo proxy ${res.status} for ${ticker}; using stale cache`);
+      return { ticker, dates: cached.dates, prices: cached.prices };
+    }
+    throw new Error(`Yahoo proxy returned ${res.status} for ${ticker}`);
+  }
 
   const data = await res.json();
   if (!data.series || data.series.length < 30) {
@@ -146,8 +162,12 @@ export async function fetchMarketCaps(tickers, universe) {
   const cacheKey = `aurum_mktcap_${tickers.sort().join(',')}`;
   const cached = sessionStorage.getItem(cacheKey);
   if (cached) {
-    const { weights, fetchedAt } = JSON.parse(cached);
-    if (Date.now() - fetchedAt < CAP_TTL) return weights;
+    try {
+      const { weights, fetchedAt } = JSON.parse(cached);
+      if (typeof fetchedAt === 'number' && Date.now() - fetchedAt < CAP_TTL) return weights;
+    } catch {
+      sessionStorage.removeItem(cacheKey);
+    }
   }
 
   const tierFallback = { Mega: 200e9, Large: 50e9, Mid: 10e9 };

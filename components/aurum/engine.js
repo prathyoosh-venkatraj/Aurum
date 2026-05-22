@@ -77,22 +77,25 @@ function projectToSimplex(v) {
 function projectToSimplexBounded(v, maxWeight = 1.0) {
   if (maxWeight >= 1.0) return projectToSimplex(v);
   const n = v.length;
+  // If constraint is infeasible, relax maxWeight to 1/n so weights sum to 1
+  const effectiveCap = Math.max(maxWeight, 1 / n);
   let w = projectToSimplex(v);
 
   for (let iter = 0; iter < 200; iter++) {
     let excess = 0, freeCount = 0;
     for (let i = 0; i < n; i++) {
-      if (w[i] > maxWeight + 1e-10) { excess += w[i] - maxWeight; w[i] = maxWeight; }
+      if (w[i] > effectiveCap + 1e-10) { excess += w[i] - effectiveCap; w[i] = effectiveCap; }
       else freeCount++;
     }
     if (excess < 1e-10) break;
-    const delta = excess / Math.max(1, freeCount);
+    if (freeCount === 0) break; // all slots capped; can't redistribute
+    const delta = excess / freeCount;
     for (let i = 0; i < n; i++) {
-      if (w[i] < maxWeight) w[i] = Math.min(maxWeight, w[i] + delta);
+      if (w[i] < effectiveCap) w[i] = Math.min(effectiveCap, w[i] + delta);
     }
   }
   const sum = w.reduce((s, x) => s + x, 0);
-  return sum > 1e-9 ? w.map(x => x / sum) : w;
+  return sum > 1e-9 ? w.map(x => x / sum) : new Array(n).fill(1 / n);
 }
 
 /**
@@ -115,7 +118,8 @@ function enforceSectorCaps(w, sectorGroups, sectorCap) {
     }
     if (!changed) break;
     const total = wc.reduce((s, x) => s + x, 0);
-    if (total > 1e-9) { for (let i = 0; i < wc.length; i++) wc[i] /= total; }
+    if (total < 1e-9) return new Array(wc.length).fill(1 / wc.length);
+    for (let i = 0; i < wc.length; i++) wc[i] /= total;
   }
   return wc;
 }
