@@ -109,10 +109,17 @@ input { font-family: var(--font-mono); }
   display: flex;
   flex-direction: column;
   gap: 0;
-  overflow-y: auto;
+  overflow: hidden;
   max-height: calc(100vh - 56px);
   position: sticky;
   top: 56px;
+}
+
+/* Scrollable zone: filters + search + portfolio only */
+.cp-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .panel-section {
