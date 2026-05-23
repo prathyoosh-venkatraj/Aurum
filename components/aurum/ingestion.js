@@ -113,29 +113,56 @@ function alignSeries(histories) {
 }
 
 /**
+ * Run fn(item) for all items with at most `concurrency` in-flight at once.
+ * Returns results array in original order.
+ */
+async function pooledMap(items, fn, concurrency) {
+  const results = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i], i);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, worker)
+  );
+  return results;
+}
+
+/**
  * Fetch and align history for a list of tickers.
+ * Fetches are run concurrently (up to 12 at once) so wall-clock time scales
+ * roughly as ceil(N/12) × avg_fetch_time rather than N × avg_fetch_time.
+ *
  * @param {string[]} tickers
- * @param {function} onProgress  Called with (done, total)
+ * @param {function} onProgress  Called with (done, total) as each fetch settles
  * @returns {{ tickers, dates, alignedReturns }}
  */
 export async function fetchAlignedReturns(tickers, onProgress) {
-  const histories = [], failed = [];
+  let done = 0;
 
-  for (let i = 0; i < tickers.length; i++) {
+  const settled = await pooledMap(tickers, async ticker => {
     try {
-      histories.push(await fetchTickerHistory(tickers[i]));
+      const h = await fetchTickerHistory(ticker);
+      if (onProgress) onProgress(++done, tickers.length);
+      return { ok: true, value: h };
     } catch (e) {
-      failed.push(tickers[i]);
-      console.warn(`Aurum ingestion: skipping ${tickers[i]} — ${e.message}`);
+      if (onProgress) onProgress(++done, tickers.length);
+      console.warn(`Aurum ingestion: skipping ${ticker} — ${e.message}`);
+      return { ok: false, ticker, reason: e.message };
     }
-    if (onProgress) onProgress(i + 1, tickers.length);
-  }
+  }, 12);
 
-  if (failed.length > 0 && histories.length < 2) {
+  const histories    = settled.filter(r => r.ok).map(r => r.value);
+  const failed       = settled.filter(r => !r.ok).map(r => r.ticker);
+  const validTickers = histories.map(h => h.ticker);
+
+  if (histories.length < 2) {
     throw new Error(`Could not fetch data for: ${failed.join(', ')}. Not enough tickers to optimise.`);
   }
 
-  const validTickers = tickers.filter(t => !failed.includes(t));
   const { dates, alignedReturns } = alignSeries(histories);
 
   if (alignedReturns.length < 30) {

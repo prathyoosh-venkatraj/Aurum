@@ -19,7 +19,7 @@ export const state = {
   },
   lastResult:  null,
   isRunning:   false,
-  MAX_TICKERS: 30,
+  MAX_TICKERS: 45,
   MIN_TICKERS: 2
 };
 
