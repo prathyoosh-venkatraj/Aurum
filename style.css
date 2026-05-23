@@ -438,6 +438,18 @@ input { font-family: var(--font-mono); }
   color: var(--text-dim);
   text-transform: uppercase;
   margin-bottom: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.panel-card-sub {
+  font-family: var(--font-display);
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 /* Frontier chart */
@@ -805,6 +817,53 @@ input { font-family: var(--font-mono); }
   border-radius: 2px;
   min-width: 2px;
   opacity: 0.7;
+}
+
+/* ── Heatmap hover tooltip ───────────────────────────────────────────────── */
+.heatmap-tooltip {
+  position: fixed;
+  display: none;
+  width: 234px;
+  background: #0C0C0C;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--gold-border);
+  border-radius: var(--radius);
+  padding: 10px 13px;
+  pointer-events: none;
+  z-index: 9000;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.7);
+}
+.ht-pair {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--gold);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-bottom: 5px;
+}
+.ht-tag {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 7px;
+}
+.ht-body {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+.ht-corr {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  letter-spacing: 0.04em;
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */

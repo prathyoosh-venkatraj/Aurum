@@ -295,19 +295,49 @@ export function drawWeightChart(result) {
 
 // ── Correlation Heatmap ────────────────────────────────────────────────────
 
+let _hmTooltip = null;
+
+function getHmTooltip() {
+  if (!_hmTooltip || !document.contains(_hmTooltip)) {
+    _hmTooltip = document.createElement('div');
+    _hmTooltip.className = 'heatmap-tooltip';
+    document.body.appendChild(_hmTooltip);
+  }
+  return _hmTooltip;
+}
+
+function hideHmTooltip() {
+  if (_hmTooltip) _hmTooltip.style.display = 'none';
+}
+
+function cellLabel(r) {
+  if (r >=  0.70) return { tag: 'Highly linked',       body: 'These assets usually rise and fall together. Holding both offers limited protection against market moves.' };
+  if (r >=  0.40) return { tag: 'Moderately linked',   body: 'A noticeable shared rhythm — they frequently move in the same direction.' };
+  if (r >=  0.15) return { tag: 'Mildly linked',       body: 'A weak positive relationship. They sometimes move together, sometimes independently.' };
+  if (r >= -0.15) return { tag: 'Largely independent', body: 'These assets move mostly on their own — a good pairing for spreading risk.' };
+  if (r >= -0.40) return { tag: 'Mildly offsetting',   body: 'A slight tendency to move in opposite directions, adding some balance to the portfolio.' };
+  if (r >= -0.70) return { tag: 'Often offsetting',    body: 'These assets frequently move in opposite directions — helpful for cushioning downturns.' };
+  return                 { tag: 'Natural hedge',        body: 'When one tends to fall, the other often rises. A strong counterbalancing pair.' };
+}
+
 export function drawHeatmap(result) {
   const container = document.getElementById('heatmap-wrap');
   const canvas    = document.getElementById('heatmap-canvas');
   if (!canvas || !container) return;
 
+  hideHmTooltip();
+
   const { correlation, tickers } = result;
   const N = tickers.length;
 
-  const maxWidth = container.clientWidth || 400;
-  const cellSize = Math.max(18, Math.min(48, Math.floor((maxWidth - 60) / N)));
-  const labelSize = 52;
-  const totalW = labelSize + N * cellSize;
-  const totalH = labelSize + N * cellSize;
+  const maxWidth   = container.clientWidth || 420;
+  const cellSize   = Math.max(18, Math.min(48, Math.floor((maxWidth - 60) / N)));
+  const labelSize  = 52;
+  const legendGap  = 18;
+  const legendH    = 10;
+  const legendLblH = 20;
+  const totalW     = labelSize + N * cellSize;
+  const totalH     = labelSize + N * cellSize + legendGap + legendH + legendLblH;
 
   const dpr = window.devicePixelRatio || 1;
   canvas.width  = totalW * dpr;
@@ -321,32 +351,47 @@ export function drawHeatmap(result) {
   ctx.fillRect(0, 0, totalW, totalH);
 
   function corrToColour(r) {
-    if (r >= 0) {
-      return `rgb(${Math.round(245 * r)},${Math.round(197 * r)},${Math.round(24 * r + 20 * (1 - r))})`;
-    }
+    if (r >= 0) return `rgb(${Math.round(245 * r)},${Math.round(197 * r)},${Math.round(24 * r + 20 * (1 - r))})`;
     const t = -r;
     return `rgb(0,0,${Math.round(80 + 175 * t)})`;
   }
 
+  // Draw cells
   for (let i = 0; i < N; i++) {
     for (let j = 0; j < N; j++) {
       const rho = correlation[i][j];
-      const x = labelSize + j * cellSize;
-      const y = labelSize + i * cellSize;
-      ctx.fillStyle = corrToColour(rho);
-      ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
-      if (cellSize >= 28) {
-        ctx.fillStyle = Math.abs(rho) > 0.5 ? '#000' : '#666';
-        ctx.font = `${Math.max(8, cellSize * 0.28)}px JetBrains Mono, monospace`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(rho.toFixed(2), x + cellSize / 2, y + cellSize / 2);
+      const x   = labelSize + j * cellSize;
+      const y   = labelSize + i * cellSize;
+
+      if (i === j) {
+        // Diagonal: muted dark tile with ticker label (self-correlation is meaningless)
+        ctx.fillStyle = '#181818';
+        ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+        if (cellSize >= 22) {
+          ctx.fillStyle = '#555';
+          ctx.font = `600 ${Math.max(7, Math.floor(cellSize * 0.24))}px JetBrains Mono, monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(tickers[i].slice(0, 5), x + cellSize / 2, y + cellSize / 2);
+        }
+      } else {
+        ctx.fillStyle = corrToColour(rho);
+        ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+        if (cellSize >= 28) {
+          ctx.fillStyle = Math.abs(rho) > 0.5 ? '#000' : '#777';
+          ctx.font = `${Math.max(8, Math.floor(cellSize * 0.28))}px JetBrains Mono, monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(rho.toFixed(2), x + cellSize / 2, y + cellSize / 2);
+        }
       }
     }
   }
 
+  // Axis labels
+  const axisFont = `${Math.max(8, Math.floor(cellSize * 0.3))}px JetBrains Mono, monospace`;
   ctx.fillStyle = TEXT_DIM;
-  ctx.font = `${Math.max(8, cellSize * 0.3)}px JetBrains Mono, monospace`;
+  ctx.font = axisFont;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   for (let j = 0; j < N; j++) {
@@ -359,6 +404,84 @@ export function drawHeatmap(result) {
   for (let i = 0; i < N; i++) {
     ctx.fillText(tickers[i], labelSize - 6, labelSize + i * cellSize + cellSize / 2);
   }
+
+  // ── Color legend bar ─────────────────────────────────────────────────────
+  const legY = labelSize + N * cellSize + legendGap;
+  const legX = labelSize;
+  const legW = N * cellSize;
+
+  const grad = ctx.createLinearGradient(legX, 0, legX + legW, 0);
+  grad.addColorStop(0,   'rgb(0,0,255)');
+  grad.addColorStop(0.5, '#141414');
+  grad.addColorStop(1,   '#F5C518');
+  ctx.fillStyle = grad;
+  ctx.fillRect(legX, legY, legW, legendH);
+  ctx.strokeStyle = '#2A2A2A';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(legX, legY, legW, legendH);
+
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textBaseline = 'top';
+
+  ctx.fillStyle = '#6688CC';
+  ctx.textAlign = 'left';
+  ctx.fillText('← Moves opposite', legX, legY + legendH + 4);
+
+  ctx.fillStyle = '#555';
+  ctx.textAlign = 'center';
+  ctx.fillText('Neutral', legX + legW / 2, legY + legendH + 4);
+
+  ctx.fillStyle = '#AA8800';
+  ctx.textAlign = 'right';
+  ctx.fillText('Moves together →', legX + legW, legY + legendH + 4);
+
+  // ── Hover tooltip ────────────────────────────────────────────────────────
+  if (canvas._hmMove)  canvas.removeEventListener('mousemove',  canvas._hmMove);
+  if (canvas._hmLeave) canvas.removeEventListener('mouseleave', canvas._hmLeave);
+
+  canvas._hmMove = function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const mx   = (e.clientX - rect.left)  * (totalW / rect.width);
+    const my   = (e.clientY - rect.top)   * (totalH / rect.height);
+
+    if (mx < labelSize || my < labelSize ||
+        mx >= labelSize + N * cellSize || my >= labelSize + N * cellSize) {
+      hideHmTooltip(); return;
+    }
+
+    const col = Math.floor((mx - labelSize) / cellSize);
+    const row = Math.floor((my - labelSize) / cellSize);
+    if (col < 0 || col >= N || row < 0 || row >= N) { hideHmTooltip(); return; }
+
+    const rho = correlation[row][col];
+    const tip = getHmTooltip();
+
+    if (row === col) {
+      tip.innerHTML = `
+        <div class="ht-pair">${tickers[row]}</div>
+        <div class="ht-tag">Self-reference</div>
+        <div class="ht-body">Every asset is perfectly correlated with itself. This cell is shown for layout purposes only.</div>`;
+    } else {
+      const { tag, body } = cellLabel(rho);
+      const sign = rho >= 0 ? '+' : '';
+      tip.innerHTML = `
+        <div class="ht-pair">${tickers[row]} ↔ ${tickers[col]}</div>
+        <div class="ht-tag">${tag}</div>
+        <div class="ht-body">${body}</div>
+        <div class="ht-corr">Correlation score: ${sign}${rho.toFixed(2)}</div>`;
+    }
+
+    const TIP_W = 234;
+    const left  = e.clientX + 16 + TIP_W > window.innerWidth ? e.clientX - TIP_W - 10 : e.clientX + 16;
+    tip.style.left    = left + 'px';
+    tip.style.top     = (e.clientY - 10) + 'px';
+    tip.style.display = 'block';
+  };
+
+  canvas._hmLeave = () => hideHmTooltip();
+
+  canvas.addEventListener('mousemove',  canvas._hmMove);
+  canvas.addEventListener('mouseleave', canvas._hmLeave);
 }
 
 // ── Correlation Insights ───────────────────────────────────────────────────
