@@ -425,15 +425,11 @@ export function drawHeatmap(result) {
 
   ctx.fillStyle = '#6688CC';
   ctx.textAlign = 'left';
-  ctx.fillText('← Moves opposite', legX, legY + legendH + 4);
-
-  ctx.fillStyle = '#555';
-  ctx.textAlign = 'center';
-  ctx.fillText('Neutral', legX + legW / 2, legY + legendH + 4);
+  ctx.fillText('← Opposite', legX, legY + legendH + 4);
 
   ctx.fillStyle = '#AA8800';
   ctx.textAlign = 'right';
-  ctx.fillText('Moves together →', legX + legW, legY + legendH + 4);
+  ctx.fillText('Together →', legX + legW, legY + legendH + 4);
 
   // ── Hover tooltip ────────────────────────────────────────────────────────
   if (canvas._hmMove)  canvas.removeEventListener('mousemove',  canvas._hmMove);

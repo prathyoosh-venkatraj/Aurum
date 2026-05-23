@@ -342,6 +342,15 @@ input { font-family: var(--font-mono); }
   color: var(--text-dim);
   font-family: var(--font-display);
   font-weight: 600;
+  line-height: 1.3;
+}
+.radio-sub {
+  display: block;
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  margin-top: 1px;
 }
 
 /* Run button */
