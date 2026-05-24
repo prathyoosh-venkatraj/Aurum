@@ -345,9 +345,17 @@ function setupUI() {
     document.querySelectorAll('.tier-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     renderHoldings(portfolioData.portfolios[selectedType], selectedTier);
-    const countEl    = document.getElementById('holdings-count');
-    const investedEl = document.getElementById('holdings-invested');
-    // updated inside renderHoldings
+  });
+
+  // "Open in Optimizer" — seed the optimizer's localStorage key before navigating
+  document.getElementById('cta-optimizer-link').addEventListener('click', e => {
+    e.preventDefault();
+    const portfolio = portfolioData.portfolios[selectedType];
+    const tickers   = portfolio.tickers.map(h => h.ticker);
+    try {
+      localStorage.setItem('aurum_portfolio_v1', JSON.stringify(tickers));
+    } catch {}
+    window.location.href = 'index.html';
   });
 
   // Render initial stats immediately (before prices load)
