@@ -1351,6 +1351,19 @@ input { font-family: var(--font-mono); }
   .portfolios-controls { gap: 20px; }
 }
 
+/* ── Tier warning banner ────────────────────────────────────────────────────── */
+.tier-warning {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  line-height: 1.6;
+  color: #c49a0e;
+  background: rgba(245, 197, 24, 0.06);
+  border: 1px solid rgba(245, 197, 24, 0.2);
+  border-radius: var(--radius);
+  padding: 9px 14px;
+  margin-bottom: 14px;
+}
+
 /* ── Refresh weights button & toast ─────────────────────────────────────────── */
 .footer-refresh-row {
   display: flex;

@@ -12,6 +12,7 @@
       "tagline": "Maximise expected annual return",
       "description": "Targets the highest expected return using a max-Sharpe allocation across high-quality growth equities from the Aurum universe. Weighted toward technology, health care innovation, and global growth leaders. Higher volatility than the Min Risk portfolio.",
       "objective": "max_sharpe",
+      "min_recommended_tier": 5000,
       "tickers": [
         { "ticker": "NVDA",  "name": "NVIDIA Corporation",            "sector": "Information Technology", "region": "US", "weight": 0.10 },
         { "ticker": "MSFT",  "name": "Microsoft Corporation",         "sector": "Information Technology", "region": "US", "weight": 0.09 },
@@ -48,6 +49,7 @@
       "tagline": "Minimise portfolio volatility",
       "description": "Targets the minimum-variance point on the efficient frontier using defensive equities across utilities, consumer staples, and health care. Lower expected return than the Max Growth portfolio, but substantially smaller drawdowns and lower day-to-day volatility.",
       "objective": "min_variance",
+      "min_recommended_tier": 2000,
       "tickers": [
         { "ticker": "JNJ",   "name": "Johnson & Johnson",             "sector": "Health Care",            "region": "US", "weight": 0.08 },
         { "ticker": "KO",    "name": "The Coca-Cola Company",         "sector": "Consumer Staples",       "region": "US", "weight": 0.07 },

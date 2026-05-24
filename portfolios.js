@@ -132,11 +132,14 @@ function computeAllocations(portfolio, tier) {
     return { ...h, shares, actual: shares * h.price };
   });
 
-  const anyShares = holdings.some(h => h.shares > 0);
+  const filledCount = holdings.filter(h => h.shares > 0).length;
   let isGreedy = false;
 
-  if (!anyShares && candidates.length > 0) {
-    // Tier too small for weight-proportional allocation; buy 1 share each by weight order
+  // Fall back to greedy if weight-proportional fills fewer than 3 positions.
+  // This handles the case where a few cheap stocks sneak through (e.g. KO at $65
+  // gets 1 share from a $70 ideal allocation) while all others yield 0 shares.
+  if (filledCount < 3 && candidates.length > 0) {
+    // Buy 1 share per position in weight order while budget allows
     isGreedy = true;
     let remaining = tier;
     const sorted = [...candidates].sort((a, b) => b.weight - a.weight);
@@ -272,6 +275,20 @@ function renderHoldings(portfolio, tier) {
   }
 
   const { active, dropped, invested, cashRemainder, isGreedy } = computeAllocations(portfolio, tier);
+
+  // Tier warning
+  const tierWarnEl = document.getElementById('tier-warning');
+  const minTier = portfolio.min_recommended_tier;
+  if (minTier && tier < minTier) {
+    tierWarnEl.textContent =
+      `This portfolio is optimised for larger allocations. ` +
+      `At $${(tier / 1000).toFixed(0)}K, diversification is limited — ` +
+      `full exposure across all ${portfolio.tickers.length} positions is best achieved from ` +
+      `$${(minTier / 1000).toFixed(0)}K+.`;
+    tierWarnEl.style.display = 'block';
+  } else {
+    tierWarnEl.style.display = 'none';
+  }
 
   document.getElementById('holdings-count').textContent =
     `${active.length} position${active.length !== 1 ? 's' : ''}`;
