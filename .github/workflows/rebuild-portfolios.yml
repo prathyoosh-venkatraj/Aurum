@@ -1,7 +1,11 @@
 name: Rebuild Sample Portfolios
 
 on:
+  # Manual trigger from the Aurum UI or GitHub — runs full MVO rebuild
   workflow_dispatch:
+  # Weekly automatic refresh every Monday 06:00 UTC (after Friday close settles)
+  schedule:
+    - cron: '0 6 * * 1'
 
 jobs:
   build:
@@ -15,7 +19,14 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Run build-portfolios
+      # Weekly cron: recompute stats from live prices, keep curated weights intact
+      - name: Refresh portfolio stats (weekly)
+        if: github.event_name == 'schedule'
+        run: node scripts/verify-portfolio-stats.mjs
+
+      # Manual trigger: full MVO rebuild — new weights, new tickers, new stats
+      - name: Full MVO rebuild (manual)
+        if: github.event_name == 'workflow_dispatch'
         run: node scripts/build-portfolios.mjs
 
       - name: Commit updated portfolios
