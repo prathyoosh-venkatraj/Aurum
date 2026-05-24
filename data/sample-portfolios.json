@@ -1,0 +1,83 @@
+{
+  "_meta": {
+    "generated": "2026-05-24",
+    "refresh_frequency": "weekly",
+    "universe_version": "1.0.0",
+    "universe_count": 500,
+    "note": "Initial curated portfolios. Run `node scripts/build-portfolios.mjs` to recompute from live market data."
+  },
+  "portfolios": {
+    "growth": {
+      "name": "Max Growth",
+      "tagline": "Maximise expected annual return",
+      "description": "Targets the highest expected return using a max-Sharpe allocation across high-quality growth equities from the Aurum universe. Weighted toward technology, health care innovation, and global growth leaders. Higher volatility than the Min Risk portfolio.",
+      "objective": "max_sharpe",
+      "tickers": [
+        { "ticker": "NVDA",  "name": "NVIDIA Corporation",            "sector": "Information Technology", "region": "US", "weight": 0.10 },
+        { "ticker": "MSFT",  "name": "Microsoft Corporation",         "sector": "Information Technology", "region": "US", "weight": 0.09 },
+        { "ticker": "AAPL",  "name": "Apple Inc.",                    "sector": "Information Technology", "region": "US", "weight": 0.07 },
+        { "ticker": "META",  "name": "Meta Platforms Inc.",           "sector": "Communication Services", "region": "US", "weight": 0.07 },
+        { "ticker": "GOOGL", "name": "Alphabet Inc.",                 "sector": "Communication Services", "region": "US", "weight": 0.06 },
+        { "ticker": "AMZN",  "name": "Amazon.com Inc.",               "sector": "Consumer Discretionary", "region": "US", "weight": 0.06 },
+        { "ticker": "LLY",   "name": "Eli Lilly and Company",        "sector": "Health Care",            "region": "US", "weight": 0.06 },
+        { "ticker": "TSLA",  "name": "Tesla Inc.",                    "sector": "Consumer Discretionary", "region": "US", "weight": 0.05 },
+        { "ticker": "AMD",   "name": "Advanced Micro Devices Inc.",   "sector": "Information Technology", "region": "US", "weight": 0.05 },
+        { "ticker": "ASML",  "name": "ASML Holding N.V. (ADR)",      "sector": "Information Technology", "region": "EU", "weight": 0.05 },
+        { "ticker": "DDOG",  "name": "Datadog Inc.",                  "sector": "Information Technology", "region": "US", "weight": 0.04 },
+        { "ticker": "NET",   "name": "Cloudflare Inc.",               "sector": "Information Technology", "region": "US", "weight": 0.04 },
+        { "ticker": "WDAY",  "name": "Workday Inc.",                  "sector": "Information Technology", "region": "US", "weight": 0.04 },
+        { "ticker": "CRM",   "name": "Salesforce Inc.",               "sector": "Information Technology", "region": "US", "weight": 0.04 },
+        { "ticker": "INTU",  "name": "Intuit Inc.",                   "sector": "Information Technology", "region": "US", "weight": 0.03 },
+        { "ticker": "VRTX",  "name": "Vertex Pharmaceuticals Inc.",   "sector": "Health Care",            "region": "US", "weight": 0.03 },
+        { "ticker": "SNPS",  "name": "Synopsys Inc.",                 "sector": "Information Technology", "region": "US", "weight": 0.03 },
+        { "ticker": "NFLX",  "name": "Netflix Inc.",                  "sector": "Communication Services", "region": "US", "weight": 0.03 },
+        { "ticker": "PDD",   "name": "PDD Holdings Inc. (ADR)",       "sector": "Consumer Discretionary", "region": "EM", "weight": 0.03 },
+        { "ticker": "COIN",  "name": "Coinbase Global Inc.",          "sector": "Financials",             "region": "US", "weight": 0.03 }
+      ],
+      "stats": {
+        "expected_return": 0.242,
+        "volatility": 0.298,
+        "sharpe": 0.66,
+        "max_drawdown": -0.38,
+        "beta": 1.58
+      },
+      "region_split": { "US": 0.92, "EU": 0.05, "APAC": 0.00, "EM": 0.03 }
+    },
+    "shield": {
+      "name": "Min Risk",
+      "tagline": "Minimise portfolio volatility",
+      "description": "Targets the minimum-variance point on the efficient frontier using defensive equities across utilities, consumer staples, and health care. Lower expected return than the Max Growth portfolio, but substantially smaller drawdowns and lower day-to-day volatility.",
+      "objective": "min_variance",
+      "tickers": [
+        { "ticker": "JNJ",   "name": "Johnson & Johnson",             "sector": "Health Care",            "region": "US", "weight": 0.08 },
+        { "ticker": "KO",    "name": "The Coca-Cola Company",         "sector": "Consumer Staples",       "region": "US", "weight": 0.07 },
+        { "ticker": "PG",    "name": "Procter & Gamble Co.",          "sector": "Consumer Staples",       "region": "US", "weight": 0.07 },
+        { "ticker": "MSFT",  "name": "Microsoft Corporation",         "sector": "Information Technology", "region": "US", "weight": 0.07 },
+        { "ticker": "NVO",   "name": "Novo Nordisk A/S (ADR)",        "sector": "Health Care",            "region": "EU", "weight": 0.07 },
+        { "ticker": "NSRGY", "name": "Nestlé S.A. (ADR)",            "sector": "Consumer Staples",       "region": "EU", "weight": 0.06 },
+        { "ticker": "NEE",   "name": "NextEra Energy Inc.",           "sector": "Utilities",              "region": "US", "weight": 0.06 },
+        { "ticker": "ABBV",  "name": "AbbVie Inc.",                   "sector": "Health Care",            "region": "US", "weight": 0.06 },
+        { "ticker": "MCD",   "name": "McDonald's Corporation",        "sector": "Consumer Discretionary", "region": "US", "weight": 0.05 },
+        { "ticker": "WM",    "name": "Waste Management Inc.",         "sector": "Industrials",            "region": "US", "weight": 0.05 },
+        { "ticker": "SO",    "name": "The Southern Company",          "sector": "Utilities",              "region": "US", "weight": 0.04 },
+        { "ticker": "LNT",   "name": "Alliant Energy Corp.",          "sector": "Utilities",              "region": "US", "weight": 0.04 },
+        { "ticker": "CMS",   "name": "CMS Energy Corporation",        "sector": "Utilities",              "region": "US", "weight": 0.04 },
+        { "ticker": "MKC",   "name": "McCormick & Company",           "sector": "Consumer Staples",       "region": "US", "weight": 0.04 },
+        { "ticker": "CLX",   "name": "The Clorox Company",            "sector": "Consumer Staples",       "region": "US", "weight": 0.04 },
+        { "ticker": "COST",  "name": "Costco Wholesale Corporation",  "sector": "Consumer Staples",       "region": "US", "weight": 0.04 },
+        { "ticker": "SJM",   "name": "The J.M. Smucker Co.",          "sector": "Consumer Staples",       "region": "US", "weight": 0.03 },
+        { "ticker": "RHHBY", "name": "Roche Holding AG (ADR)",        "sector": "Health Care",            "region": "EU", "weight": 0.03 },
+        { "ticker": "AME",   "name": "AMETEK Inc.",                   "sector": "Industrials",            "region": "US", "weight": 0.03 },
+        { "ticker": "VZ",    "name": "Verizon Communications Inc.",   "sector": "Communication Services", "region": "US", "weight": 0.03 }
+      ],
+      "stats": {
+        "expected_return": 0.108,
+        "volatility": 0.118,
+        "sharpe": 0.54,
+        "max_drawdown": -0.19,
+        "beta": 0.68
+      },
+      "region_split": { "US": 0.84, "EU": 0.16, "APAC": 0.00, "EM": 0.00 }
+    }
+  }
+}

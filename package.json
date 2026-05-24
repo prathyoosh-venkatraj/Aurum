@@ -6,6 +6,7 @@
     "node": ">=20.x"
   },
   "scripts": {
-    "verify-tickers": "node scripts/verify-tickers.mjs"
+    "verify-tickers":    "node scripts/verify-tickers.mjs",
+    "build-portfolios":  "node scripts/build-portfolios.mjs"
   }
 }
