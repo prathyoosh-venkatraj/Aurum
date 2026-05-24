@@ -496,8 +496,12 @@ function setupUI() {
   document.getElementById('cta-optimizer-link').addEventListener('click', e => {
     e.preventDefault();
     if (!selectedId) return;
-    const tickers = portfolioData.portfolios[selectedId].tickers.map(h => h.ticker);
-    try { localStorage.setItem('aurum_portfolio_v1', JSON.stringify(tickers)); } catch {}
+    const portfolio = portfolioData.portfolios[selectedId];
+    const tickers   = portfolio.tickers.map(h => h.ticker);
+    try {
+      localStorage.setItem('aurum_portfolio_v1', JSON.stringify(tickers));
+      localStorage.setItem('aurum_autorun_v1', JSON.stringify({ name: portfolio.name }));
+    } catch {}
     window.location.href = 'index.html';
   });
 

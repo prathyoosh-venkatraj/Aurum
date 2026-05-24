@@ -26,6 +26,7 @@ async function loadUniverse() {
 // ── Portfolio persistence ──────────────────────────────────────────────────
 
 const PORTFOLIO_KEY = 'aurum_portfolio_v1';
+const AUTORUN_KEY   = 'aurum_autorun_v1';
 
 function savePortfolio() {
   try {
@@ -533,6 +534,24 @@ function subscribeStateEvents() {
   on('viewsChanged', () => renderViews());
 }
 
+// ── Auto-run from model portfolio ──────────────────────────────────────────
+
+async function autoRunFromPortfolio() {
+  let meta;
+  try {
+    const raw = localStorage.getItem(AUTORUN_KEY);
+    if (!raw) return;
+    meta = JSON.parse(raw);
+  } catch { return; }
+  finally { localStorage.removeItem(AUTORUN_KEY); }
+
+  if (!canRun()) return;
+  setStatusLoading(`Auto-optimising "${meta.name}"…`);
+  // One rAF so the browser paints the restored portfolio list before blocking on fetch
+  await new Promise(r => requestAnimationFrame(r));
+  await runOptimisation();
+}
+
 // ── Boot ───────────────────────────────────────────────────────────────────
 
 (async function boot() {
@@ -554,4 +573,5 @@ function subscribeStateEvents() {
   renderPortfolio();
   updateRunButton();
   updateCountLabel();
+  await autoRunFromPortfolio();
 })();
