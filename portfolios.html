@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AURUM — Sample Portfolios</title>
-  <meta name="description" content="Pre-optimised Max Growth and Min Risk portfolios at multiple investment amounts, built from the 500-ticker Aurum universe.">
+  <meta name="description" content="Pre-optimised model portfolios across 12 strategies — broad market, sector focus, thematic, and style. Built from the 500-ticker Aurum universe.">
   <meta property="og:title" content="AURUM — Sample Portfolios">
-  <meta property="og:description" content="Ready-to-deploy allocations across 500 global equities. Refreshed weekly from live market data.">
+  <meta property="og:description" content="12 ready-to-deploy portfolio strategies across growth, income, global, and sector themes. Refreshed weekly from live market data.">
   <meta property="og:type" content="website">
   <meta name="robots" content="index, follow">
   <link rel="stylesheet" href="style.css">
@@ -32,30 +32,59 @@
   <div class="portfolios-hero">
     <h1>Sample Portfolios</h1>
     <p class="hero-sub">
-      Pre-optimised allocations built from the 500-ticker Aurum universe.
-      Choose a strategy and an investment amount — share counts are computed
-      from live prices on page load. Weights are refreshed weekly.
+      12 pre-optimised strategies built from the 500-ticker Aurum universe —
+      broad market, sector-focused, thematic, and style-based.
+      Select a portfolio to see live share counts at your investment amount.
     </p>
   </div>
 
-  <!-- ── Controls ──────────────────────────────────────────────────────── -->
-  <div class="portfolios-controls">
+  <!-- ── Library View ──────────────────────────────────────────────────── -->
+  <div id="library-view">
 
-    <div class="control-group">
-      <div class="control-label">Strategy</div>
-      <div class="portfolio-tabs" id="portfolio-tabs">
-        <button class="ptab active" data-portfolio="growth">
-          <span class="ptab-name">Max Growth</span>
-          <span class="ptab-desc">Maximise expected return</span>
-        </button>
-        <button class="ptab" data-portfolio="shield">
-          <span class="ptab-name">Min Risk</span>
-          <span class="ptab-desc">Minimise portfolio volatility</span>
-        </button>
+    <div class="library-filters">
+      <div class="search-wrapper" style="max-width:320px;">
+        <input type="text" id="portfolio-search" class="search-input"
+               placeholder="Search portfolios…" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="filter-chip-row" id="category-filters">
+        <button class="filter-chip active" data-category="all">All</button>
+        <button class="filter-chip" data-category="broad">Broad Market</button>
+        <button class="filter-chip" data-category="sector">Sector Focus</button>
+        <button class="filter-chip" data-category="thematic">Thematic</button>
+        <button class="filter-chip" data-category="style">Style</button>
+      </div>
+      <div class="filter-chip-row" id="risk-filters">
+        <button class="filter-chip active" data-risk="all">All Risk</button>
+        <button class="filter-chip risk-chip-low"    data-risk="low">Low</button>
+        <button class="filter-chip risk-chip-medium" data-risk="medium">Medium</button>
+        <button class="filter-chip risk-chip-high"   data-risk="high">High</button>
       </div>
     </div>
 
-    <div class="control-group">
+    <div id="portfolio-grid"></div>
+
+    <div id="no-results" class="no-results" style="display:none;">
+      No portfolios match your filters.
+    </div>
+
+  </div><!-- /library-view -->
+
+  <!-- ── Detail View ───────────────────────────────────────────────────── -->
+  <div id="detail-view" style="display:none;">
+
+    <div class="detail-topbar">
+      <button class="back-btn" id="back-btn">← All Portfolios</button>
+      <div class="detail-header">
+        <div class="detail-title-block">
+          <span class="detail-name" id="detail-name"></span>
+          <span class="detail-tagline" id="detail-tagline"></span>
+        </div>
+        <span id="detail-risk-badge" class="risk-badge"></span>
+      </div>
+    </div>
+
+    <!-- Tier buttons -->
+    <div class="control-group" style="margin-bottom:20px;">
       <div class="control-label">Investment Amount</div>
       <div class="tier-buttons" id="tier-buttons">
         <button class="tier-btn" data-tier="1000">$1K</button>
@@ -67,78 +96,66 @@
       </div>
     </div>
 
-  </div>
-
-  <!-- ── Stats bar ──────────────────────────────────────────────────────── -->
-  <div class="stats-bar" id="stats-bar">
-    <div class="stat">
-      <span class="stat-label">Expected Return</span>
-      <span class="stat-value" id="stat-return">—</span>
-    </div>
-    <div class="stat">
-      <span class="stat-label">Annual Volatility</span>
-      <span class="stat-value" id="stat-vol">—</span>
-    </div>
-    <div class="stat">
-      <span class="stat-label">Sharpe Ratio</span>
-      <span class="stat-value gold" id="stat-sharpe">—</span>
-    </div>
-    <div class="stat">
-      <span class="stat-label">Est. Max Drawdown</span>
-      <span class="stat-value" id="stat-drawdown">—</span>
-    </div>
-    <div class="stat">
-      <span class="stat-label">Beta vs SPY</span>
-      <span class="stat-value" id="stat-beta">—</span>
-    </div>
-  </div>
-
-  <!-- ── Holdings ──────────────────────────────────────────────────────── -->
-  <div class="holdings-section">
-    <div class="holdings-header">
-      <span class="holdings-count" id="holdings-count">— positions</span>
-      <span class="holdings-invested" id="holdings-invested"></span>
-    </div>
-    <div id="price-status" class="price-status loading">Fetching live prices…</div>
-    <div id="tier-warning" class="tier-warning" style="display:none;"></div>
-    <div class="holdings-table-wrap" id="holdings-table-wrap"></div>
-    <div class="dropped-notice" id="dropped-notice"></div>
-  </div>
-
-  <!-- ── Region exposure ────────────────────────────────────────────────── -->
-  <div class="region-section" id="region-section">
-    <div class="region-heading">Regional Exposure</div>
-    <div class="region-bar-track" id="region-bar-track">
-      <div class="region-segment us"   id="seg-us"   style="width:0%"></div>
-      <div class="region-segment eu"   id="seg-eu"   style="width:0%"></div>
-      <div class="region-segment apac" id="seg-apac" style="width:0%"></div>
-      <div class="region-segment em"   id="seg-em"   style="width:0%"></div>
-    </div>
-    <div class="region-legend">
-      <div class="region-legend-item">
-        <span class="legend-dot us"></span>
-        <span id="legend-us">US —</span>
+    <!-- Stats bar -->
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat">
+        <span class="stat-label">Expected Return</span>
+        <span class="stat-value" id="stat-return">—</span>
       </div>
-      <div class="region-legend-item">
-        <span class="legend-dot eu"></span>
-        <span id="legend-eu">EU —</span>
+      <div class="stat">
+        <span class="stat-label">Annual Volatility</span>
+        <span class="stat-value" id="stat-vol">—</span>
       </div>
-      <div class="region-legend-item">
-        <span class="legend-dot apac"></span>
-        <span id="legend-apac">APAC —</span>
+      <div class="stat">
+        <span class="stat-label">Sharpe Ratio</span>
+        <span class="stat-value gold" id="stat-sharpe">—</span>
       </div>
-      <div class="region-legend-item">
-        <span class="legend-dot em"></span>
-        <span id="legend-em">EM —</span>
+      <div class="stat">
+        <span class="stat-label">Est. Max Drawdown</span>
+        <span class="stat-value" id="stat-drawdown">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Beta vs SPY</span>
+        <span class="stat-value" id="stat-beta">—</span>
       </div>
     </div>
-  </div>
 
-  <!-- ── CTA ────────────────────────────────────────────────────────────── -->
-  <div class="portfolios-cta">
-    <p>Want to customise weights, add your own views, or explore the full efficient frontier?</p>
-    <a href="index.html" id="cta-optimizer-link" class="cta-btn">Open in Optimizer →</a>
-  </div>
+    <!-- Holdings -->
+    <div class="holdings-section">
+      <div class="holdings-header">
+        <span class="holdings-count" id="holdings-count">— positions</span>
+        <span class="holdings-invested" id="holdings-invested"></span>
+      </div>
+      <div id="price-status" class="price-status loading">Fetching live prices…</div>
+      <div id="tier-warning" class="tier-warning" style="display:none;"></div>
+      <div class="holdings-table-wrap" id="holdings-table-wrap"></div>
+      <div class="dropped-notice" id="dropped-notice"></div>
+    </div>
+
+    <!-- Region exposure -->
+    <div class="region-section" id="region-section">
+      <div class="region-heading">Regional Exposure</div>
+      <div class="region-bar-track" id="region-bar-track">
+        <div class="region-segment us"   id="seg-us"   style="width:0%"></div>
+        <div class="region-segment eu"   id="seg-eu"   style="width:0%"></div>
+        <div class="region-segment apac" id="seg-apac" style="width:0%"></div>
+        <div class="region-segment em"   id="seg-em"   style="width:0%"></div>
+      </div>
+      <div class="region-legend">
+        <div class="region-legend-item"><span class="legend-dot us"></span><span id="legend-us">US —</span></div>
+        <div class="region-legend-item"><span class="legend-dot eu"></span><span id="legend-eu">EU —</span></div>
+        <div class="region-legend-item"><span class="legend-dot apac"></span><span id="legend-apac">APAC —</span></div>
+        <div class="region-legend-item"><span class="legend-dot em"></span><span id="legend-em">EM —</span></div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="portfolios-cta">
+      <p>Want to customise weights, add your own views, or explore the full efficient frontier?</p>
+      <a href="index.html" id="cta-optimizer-link" class="cta-btn">Open in Optimizer →</a>
+    </div>
+
+  </div><!-- /detail-view -->
 
   <!-- ── Footer ─────────────────────────────────────────────────────────── -->
   <div class="portfolios-footer">
