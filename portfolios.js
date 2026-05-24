@@ -466,7 +466,10 @@ async function triggerRebuild() {
   btn.disabled = true;
   showToast('Triggering portfolio rebuild…', 'loading');
   try {
-    const res = await fetch('/api/trigger-rebuild', { method: 'POST' });
+    const res = await fetch('/api/trigger-rebuild', {
+      method: 'POST',
+      credentials: 'same-origin'
+    });
     if (!res.ok) throw new Error(`Server error ${res.status}`);
     showToast('Rebuild triggered. Weights will update in ~2 minutes — refresh the page then.', 'success');
   } catch (err) {

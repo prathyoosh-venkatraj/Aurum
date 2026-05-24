@@ -13,6 +13,34 @@
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
 
+// In-process sliding-window rate limiter (persists across warm invocations).
+const rateLimitMap = new Map();
+
+function isRateLimited(ip) {
+    const WINDOW_MS = 60_000;
+    const MAX = 30;
+    const now = Date.now();
+    const entry = rateLimitMap.get(ip);
+    if (!entry || now - entry.windowStart > WINDOW_MS) {
+        rateLimitMap.set(ip, { count: 1, windowStart: now });
+        return false;
+    }
+    if (entry.count >= MAX) return true;
+    entry.count++;
+    return false;
+}
+
+function getClientIp(req) {
+    const xff = req.headers['x-forwarded-for'];
+    return xff ? xff.split(',')[0].trim() : (req.headers['x-real-ip'] || 'unknown');
+}
+
+// Tickers, ETFs, and indices (e.g. ^GSPC, BRK.B, RELIANCE.NS, 7203.T).
+const SYMBOL_RE = /^[A-Za-z0-9.\-\^]{1,20}$/;
+const ALLOWED_MODES = new Set(['earnings', 'quote-summary', 'news', 'history']);
+// Yahoo chart range values (includes custom intraday defaults 30d/60d).
+const ALLOWED_RANGES = new Set(['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max', '30d', '60d']);
+
 async function getYahooAuth() {
     const cookieRes = await fetch('https://fc.yahoo.com/', { headers: { 'User-Agent': UA } });
     const setCookie = cookieRes.headers.get('set-cookie') || '';
@@ -39,6 +67,21 @@ export default async function handler(req, res) {
 
     if (!symbol) {
         return res.status(400).json({ error: 'E400: Missing symbol' });
+    }
+    if (!SYMBOL_RE.test(symbol)) {
+        return res.status(400).json({ error: 'E400: INVALID_SYMBOL_FORMAT' });
+    }
+    if (mode !== undefined && !ALLOWED_MODES.has(mode)) {
+        return res.status(400).json({ error: 'E400: UNSUPPORTED_MODE', allowed: Array.from(ALLOWED_MODES) });
+    }
+    if (range !== undefined && !ALLOWED_RANGES.has(range)) {
+        return res.status(400).json({ error: 'E400: UNSUPPORTED_RANGE', allowed: Array.from(ALLOWED_RANGES) });
+    }
+
+    const ip = getClientIp(req);
+    if (isRateLimited(ip)) {
+        res.setHeader('Retry-After', '60');
+        return res.status(429).json({ error: 'E429: RATE_LIMIT_EXCEEDED' });
     }
 
     // ── earnings mode ──────────────────────────────────────────────────────

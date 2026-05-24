@@ -5,7 +5,35 @@
  * macro context (VIXCLS) needed for Sharpe ratio computation.
  * 24h edge cache — macro rates do not need sub-daily freshness for
  * portfolio construction purposes.
+ *
+ * Security: IP rate limiting (30 req/min) + series_id format validation.
  */
+
+// In-process sliding-window rate limiter (persists across warm invocations).
+const rateLimitMap = new Map();
+
+function isRateLimited(ip) {
+    const WINDOW_MS = 60_000;
+    const MAX = 30;
+    const now = Date.now();
+    const entry = rateLimitMap.get(ip);
+    if (!entry || now - entry.windowStart > WINDOW_MS) {
+        rateLimitMap.set(ip, { count: 1, windowStart: now });
+        return false;
+    }
+    if (entry.count >= MAX) return true;
+    entry.count++;
+    return false;
+}
+
+function getClientIp(req) {
+    const xff = req.headers['x-forwarded-for'];
+    return xff ? xff.split(',')[0].trim() : (req.headers['x-real-ip'] || 'unknown');
+}
+
+// FRED series IDs: alphanumeric + underscores, max 20 chars (e.g. DGS10, VIXCLS).
+const SERIES_ID_RE = /^[A-Za-z0-9_]{1,20}$/;
+
 export default async function handler(req, res) {
     const { series_id } = req.query;
     const apiKey = process.env.FRED_API_KEY;
@@ -13,6 +41,16 @@ export default async function handler(req, res) {
     if (!series_id) {
         return res.status(400).json({ error: 'E400: Missing series_id' });
     }
+    if (!SERIES_ID_RE.test(series_id)) {
+        return res.status(400).json({ error: 'E400: INVALID_SERIES_ID_FORMAT' });
+    }
+
+    const ip = getClientIp(req);
+    if (isRateLimited(ip)) {
+        res.setHeader('Retry-After', '60');
+        return res.status(429).json({ error: 'E429: RATE_LIMIT_EXCEEDED' });
+    }
+
     if (!apiKey) {
         console.warn('FRED_API_KEY missing from environment');
         return res.status(500).json({ error: 'E500: ENVAR_MISSING' });

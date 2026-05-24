@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURUM — Access</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #000;
+      color: #fff;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .gate {
+      width: 100%;
+      max-width: 380px;
+      padding: 48px 40px;
+      background: #0C0C0C;
+      border: 1px solid #1E1E1E;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .gate-logo {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      font-size: 2rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, #F5C518 0%, #FFE168 40%, #C49A0E 70%, #F5C518 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 4s linear infinite;
+      margin-bottom: 6px;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+
+    .gate-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      font-weight: 400;
+      letter-spacing: 0.22em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 36px;
+    }
+
+    .gate-divider {
+      width: 100%;
+      height: 1px;
+      background: #1E1E1E;
+      margin-bottom: 32px;
+    }
+
+    .gate-form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      color: #888;
+      text-transform: uppercase;
+    }
+
+    .field input {
+      background: #000;
+      border: 1px solid rgba(245, 197, 24, 0.22);
+      color: #F5C518;
+      padding: 11px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+      border-radius: 0;
+      -webkit-appearance: none;
+    }
+
+    .field input:focus {
+      border-color: rgba(245, 197, 24, 0.55);
+      box-shadow: 0 0 10px rgba(245, 197, 24, 0.08);
+    }
+
+    .gate-error {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: #FF4D4D;
+      letter-spacing: 0.04em;
+      min-height: 14px;
+      text-align: center;
+    }
+
+    .gate-btn {
+      width: 100%;
+      padding: 13px;
+      background: transparent;
+      border: 1px solid rgba(245, 197, 24, 0.4);
+      color: #F5C518;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+      margin-top: 6px;
+    }
+
+    .gate-btn:hover:not(:disabled) {
+      background: rgba(245, 197, 24, 0.07);
+      border-color: #F5C518;
+      box-shadow: 0 0 16px rgba(245, 197, 24, 0.18);
+    }
+
+    .gate-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 480px) {
+      .gate { padding: 36px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="gate">
+    <div class="gate-logo">AURUM</div>
+    <div class="gate-sub">Portfolio Optimisation Engine</div>
+    <div class="gate-divider"></div>
+    <form class="gate-form" id="gate-form" autocomplete="on">
+      <div class="field">
+        <label class="field-label" for="user-id">Login ID</label>
+        <input type="text" id="user-id" name="username" autocomplete="username" spellcheck="false" required>
+      </div>
+      <div class="field">
+        <label class="field-label" for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+      </div>
+      <div class="gate-error" id="gate-error" role="alert" aria-live="polite"></div>
+      <button type="submit" class="gate-btn" id="gate-btn">Access Portfolio Engine</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('gate-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = document.getElementById('gate-btn');
+      const errEl = document.getElementById('gate-error');
+      const userId = document.getElementById('user-id').value.trim();
+      const password = document.getElementById('password').value;
+
+      btn.disabled = true;
+      btn.textContent = 'Authenticating…';
+      errEl.textContent = '';
+
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ userId, password })
+        });
+
+        if (res.ok) {
+          window.location.replace('/');
+        } else {
+          errEl.textContent = 'Invalid credentials. Please try again.';
+          btn.disabled = false;
+          btn.textContent = 'Access Portfolio Engine';
+          document.getElementById('password').value = '';
+          document.getElementById('password').focus();
+        }
+      } catch {
+        errEl.textContent = 'Connection error. Please retry.';
+        btn.disabled = false;
+        btn.textContent = 'Access Portfolio Engine';
+      }
+    });
+  </script>
+</body>
+</html>

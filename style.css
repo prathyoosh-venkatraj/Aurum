@@ -96,6 +96,17 @@ input { font-family: var(--font-mono); }
 }
 .novasect-badge:hover { color: var(--gold); text-decoration: none; }
 
+.logout-btn {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: color 0.2s;
+  padding: 4px 0;
+}
+.logout-btn:hover { color: var(--text-dim); text-decoration: none; }
+
 /* ── App Layout ─────────────────────────────────────────────────────────── */
 .app-layout {
   display: grid;
