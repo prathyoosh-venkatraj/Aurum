@@ -53,6 +53,23 @@ function formatDate(dateStr) {
   return `${parseInt(d, 10)} ${months[parseInt(m, 10) - 1]} ${y}`;
 }
 
+function tradingDaysSince(dateStr) {
+  // Count weekdays (Mon–Fri) between dateStr and today, excluding dateStr itself.
+  // Ignores public holidays — close enough for a freshness label.
+  const start = new Date(dateStr + 'T00:00:00');
+  const end   = new Date();
+  end.setHours(0, 0, 0, 0);
+  let count = 0;
+  const cur = new Date(start);
+  cur.setDate(cur.getDate() + 1);
+  while (cur <= end) {
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
 // ── Status line ────────────────────────────────────────────────────────────
 
 function setStatus(msg, type = '') {
@@ -419,7 +436,11 @@ async function runOptimisation() {
     // Data freshness label
     const lastDate = alignedData.dates[alignedData.dates.length - 1];
     const freshnessEl = document.getElementById('data-freshness');
-    if (freshnessEl && lastDate) freshnessEl.textContent = `Data as of ${formatDate(lastDate)}`;
+    if (freshnessEl && lastDate) {
+      const age    = tradingDaysSince(lastDate);
+      const suffix = age === 0 ? 'today' : age === 1 ? 'prev. close' : `${age} trading days ago`;
+      freshnessEl.textContent = `Data as of ${formatDate(lastDate)} · ${suffix}`;
+    }
 
     const modeTag = optResult.mode === 'blackLitterman' ? 'BL' :
                     optResult.mode === 'minVariance'    ? 'MinVar' : 'MaxSharpe';
