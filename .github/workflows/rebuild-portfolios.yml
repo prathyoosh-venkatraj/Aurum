@@ -1,0 +1,25 @@
+name: Rebuild Sample Portfolios
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run build-portfolios
+        run: node scripts/build-portfolios.mjs
+
+      - name: Commit updated portfolios
+        run: |
+          git config user.name "Aurum Bot"
+          git config user.email "bot@novasect.space"
+          git add data/sample-portfolios.json
+          git diff --cached --quiet || git commit -m "chore: rebuild sample-portfolios.json [automated]"
+          git push

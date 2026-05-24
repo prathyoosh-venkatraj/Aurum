@@ -1350,3 +1350,44 @@ input { font-family: var(--font-mono); }
   .stat:nth-child(3) { border-top: 1px solid var(--border); }
   .portfolios-controls { gap: 20px; }
 }
+
+/* ── Refresh weights button & toast ─────────────────────────────────────────── */
+.footer-refresh-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.refresh-weights-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.18s, border-color 0.18s;
+  white-space: nowrap;
+}
+.refresh-weights-btn:hover  { color: var(--gold); border-color: var(--gold); }
+.refresh-weights-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.rebuild-toast {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.04em;
+  padding: 7px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: #111;
+  width: fit-content;
+  max-width: 100%;
+}
+.rebuild-toast.visible  { display: block; }
+.rebuild-toast.loading  { color: #aaa; border-color: #555; }
+.rebuild-toast.success  { color: #6fcf97; border-color: #2d6a4a; }
+.rebuild-toast.error    { color: #eb5757; border-color: #7a2323; }

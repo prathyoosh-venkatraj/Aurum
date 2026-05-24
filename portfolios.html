@@ -141,7 +141,11 @@
 
   <!-- ── Footer ─────────────────────────────────────────────────────────── -->
   <div class="portfolios-footer">
-    <span id="refresh-date">Portfolio weights last updated: —</span>
+    <div class="footer-refresh-row">
+      <span id="refresh-date">Portfolio weights last updated: —</span>
+      <button class="refresh-weights-btn" id="refresh-weights-btn">↺ Refresh Weights</button>
+    </div>
+    <div id="rebuild-toast" class="rebuild-toast"></div>
     <span>Prices fetched live on page load · Whole-share allocation only · Cash remainder is uninvested</span>
     <span>Not financial advice. Past performance does not guarantee future results.</span>
   </div>

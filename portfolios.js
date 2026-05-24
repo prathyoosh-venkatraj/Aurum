@@ -119,26 +119,46 @@ function getUniqueTickers() {
 // ── Allocation math ────────────────────────────────────────────────────────
 
 function computeAllocations(portfolio, tier) {
-  const raw = [];
+  const candidates = portfolio.tickers
+    .filter(h => prices[h.ticker] && prices[h.ticker] > 0)
+    .map(h => ({ ...h, price: prices[h.ticker] }));
 
-  for (const h of portfolio.tickers) {
-    const price = prices[h.ticker];
-    if (!price || price <= 0) {
-      raw.push({ ...h, price: null, shares: 0, actual: 0, hasPrce: false });
-      continue;
+  const noPriceItems = portfolio.tickers
+    .filter(h => !prices[h.ticker] || prices[h.ticker] <= 0)
+    .map(h => ({ ...h, price: null, shares: 0, actual: 0 }));
+
+  let holdings = candidates.map(h => {
+    const shares = Math.floor(tier * h.weight / h.price);
+    return { ...h, shares, actual: shares * h.price };
+  });
+
+  const anyShares = holdings.some(h => h.shares > 0);
+  let isGreedy = false;
+
+  if (!anyShares && candidates.length > 0) {
+    // Tier too small for weight-proportional allocation; buy 1 share each by weight order
+    isGreedy = true;
+    let remaining = tier;
+    const sorted = [...candidates].sort((a, b) => b.weight - a.weight);
+    const bought = new Set();
+    for (const h of sorted) {
+      if (h.price <= remaining) { bought.add(h.ticker); remaining -= h.price; }
     }
-    const idealDollars = tier * h.weight;
-    const shares       = Math.floor(idealDollars / price);
-    raw.push({ ...h, price, shares, actual: shares * price, hasPrice: true });
+    holdings = candidates.map(h => ({
+      ...h,
+      shares: bought.has(h.ticker) ? 1 : 0,
+      actual: bought.has(h.ticker) ? h.price : 0,
+    }));
   }
 
-  const active  = raw.filter(h => h.shares > 0);
-  const dropped = raw.filter(h => h.shares === 0);
+  const all     = [...holdings, ...noPriceItems];
+  const active  = all.filter(h => h.shares > 0);
+  const dropped = all.filter(h => h.shares === 0);
 
   const invested      = active.reduce((s, h) => s + h.actual, 0);
   const cashRemainder = tier - invested;
 
-  return { active, dropped, invested, cashRemainder };
+  return { active, dropped, invested, cashRemainder, isGreedy };
 }
 
 // ── Rendering ──────────────────────────────────────────────────────────────
@@ -251,7 +271,7 @@ function renderHoldings(portfolio, tier) {
     return;
   }
 
-  const { active, dropped, invested, cashRemainder } = computeAllocations(portfolio, tier);
+  const { active, dropped, invested, cashRemainder, isGreedy } = computeAllocations(portfolio, tier);
 
   document.getElementById('holdings-count').textContent =
     `${active.length} position${active.length !== 1 ? 's' : ''}`;
@@ -299,11 +319,18 @@ function renderHoldings(portfolio, tier) {
     </table>`;
 
   const noticeEl = document.getElementById('dropped-notice');
-  if (dropped.length > 0) {
-    const names = dropped.map(h => h.ticker).join(', ');
+  if (isGreedy) {
+    const unaffordable = dropped.filter(h => h.price != null);
     noticeEl.textContent =
-      `${dropped.length} position${dropped.length > 1 ? 's' : ''} excluded at this tier ` +
-      `(share price exceeds allocation): ${names}`;
+      `Budget-constrained mode: 1 share per position by weight order.` +
+      (unaffordable.length > 0
+        ? ` ${unaffordable.length} position${unaffordable.length > 1 ? 's' : ''} unaffordable at this tier: ${unaffordable.map(h => h.ticker).join(', ')}`
+        : '');
+  } else if (dropped.length > 0) {
+    const names = dropped.filter(h => h.price != null).map(h => h.ticker).join(', ');
+    noticeEl.textContent = names
+      ? `${dropped.length} position${dropped.length > 1 ? 's' : ''} excluded at this tier (share price exceeds allocation): ${names}`
+      : '';
   } else {
     noticeEl.textContent = '';
   }
@@ -322,6 +349,31 @@ function setPriceStatus(msg, type) {
   el.textContent = msg;
   el.className   = `price-status${type ? ' ' + type : ''}`;
   el.style.display = msg ? 'block' : 'none';
+}
+
+function showToast(msg, type = '') {
+  const el = document.getElementById('rebuild-toast');
+  el.textContent = msg;
+  el.className   = `rebuild-toast${type ? ' ' + type : ''} visible`;
+  clearTimeout(el._timer);
+  if (type !== 'loading') {
+    el._timer = setTimeout(() => { el.classList.remove('visible'); }, 6000);
+  }
+}
+
+async function triggerRebuild() {
+  const btn = document.getElementById('refresh-weights-btn');
+  btn.disabled = true;
+  showToast('Triggering portfolio rebuild…', 'loading');
+  try {
+    const res = await fetch('/api/trigger-rebuild', { method: 'POST' });
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    showToast('Rebuild triggered. Weights will update in ~2 minutes — refresh the page then.', 'success');
+  } catch (err) {
+    showToast(`Failed to trigger rebuild: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ── UI wiring ──────────────────────────────────────────────────────────────
@@ -346,6 +398,9 @@ function setupUI() {
     btn.classList.add('active');
     renderHoldings(portfolioData.portfolios[selectedType], selectedTier);
   });
+
+  // Refresh weights button
+  document.getElementById('refresh-weights-btn').addEventListener('click', triggerRebuild);
 
   // "Open in Optimizer" — seed the optimizer's localStorage key before navigating
   document.getElementById('cta-optimizer-link').addEventListener('click', e => {
