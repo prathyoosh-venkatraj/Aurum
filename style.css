@@ -1410,7 +1410,7 @@ input { font-family: var(--font-mono); }
   font-size: 0.58rem;
   font-weight: 600;
   letter-spacing: 0.14em;
-  color: #555;
+  color: var(--gold);
   white-space: nowrap;
   padding-top: 2px;
   min-width: 76px;
@@ -1424,7 +1424,7 @@ input { font-family: var(--font-mono); }
   font-family: var(--font-mono);
   font-size: 0.6rem;
   line-height: 1.75;
-  color: #444;
+  color: var(--gold-dim);
   font-weight: 400;
   letter-spacing: 0.02em;
 }
