@@ -60,6 +60,7 @@ export default async function handler(req, res) {
 
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   if (!GEMINI_API_KEY) return res.status(500).json({ error: 'AI service not configured' });
+  console.log('[explain] key length:', GEMINI_API_KEY.length, 'prefix:', GEMINI_API_KEY.slice(0, 8));
 
   const modeLabel = mode === 'minVariance' ? 'Minimum Variance'
                   : mode === 'blackLitterman' ? 'Black-Litterman'
@@ -94,16 +95,14 @@ export default async function handler(req, res) {
       }
     );
 
-    if (geminiRes.status === 429) {
-      const errBody = await geminiRes.json().catch(() => ({}));
-      console.error('[explain] Gemini 429 — quota details:', JSON.stringify(errBody));
-      return res.status(429).json({ error: 'AI quota limit reached — try again in a minute' });
-    }
-
     if (!geminiRes.ok) {
-      const err = await geminiRes.json().catch(() => ({}));
-      console.error('[explain] Gemini error:', geminiRes.status, JSON.stringify(err));
-      return res.status(502).json({ error: `AI service unavailable (${geminiRes.status})` });
+      const errBody = await geminiRes.json().catch(() => ({}));
+      const geminiMsg = errBody?.error?.message || errBody?.error?.status || '';
+      console.error('[explain] Gemini error:', geminiRes.status, JSON.stringify(errBody));
+      if (geminiRes.status === 429) {
+        return res.status(429).json({ error: `Gemini quota: ${geminiMsg || 'rate limit exceeded'} — try again later` });
+      }
+      return res.status(502).json({ error: `AI service unavailable (${geminiRes.status})${geminiMsg ? ': ' + geminiMsg : ''}` });
     }
 
     const data = await geminiRes.json();
