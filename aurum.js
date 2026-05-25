@@ -86,7 +86,10 @@ function clearStatus()         { setStatus(''); }
 
 // ── AI Explain panel ───────────────────────────────────────────────────────
 
+let _explainText = null; // cached for current optimisation run; cleared on next run
+
 function resetExplainPanel(result) {
+  _explainText = null;
   const btn  = document.getElementById('ai-explain-btn');
   const body = document.getElementById('ai-explain-body');
   if (!btn || !body) return;
@@ -96,6 +99,13 @@ function resetExplainPanel(result) {
   btn.textContent  = 'Explain this portfolio';
 
   btn.onclick = async () => {
+    // Return cached explanation without hitting the API again
+    if (_explainText) {
+      body.textContent = _explainText;
+      body.className   = 'ai-explain-body visible';
+      return;
+    }
+
     btn.disabled    = true;
     btn.textContent = 'Thinking…';
     body.textContent = '';
@@ -123,6 +133,7 @@ function resetExplainPanel(result) {
       });
       const data = await res.json();
       if (res.ok && data.explanation) {
+        _explainText     = data.explanation;
         body.textContent = data.explanation;
         body.className   = 'ai-explain-body visible';
       } else if (res.status === 429) {

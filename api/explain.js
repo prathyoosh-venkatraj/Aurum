@@ -65,23 +65,21 @@ export default async function handler(req, res) {
                   : mode === 'blackLitterman' ? 'Black-Litterman'
                   : 'Maximum Sharpe Ratio';
 
-  const holdings = tickers
-    .map((t, i) => `${t}: ${(weights[i] * 100).toFixed(1)}%`)
-    .join(', ');
+  // Only send top 10 holdings by weight — captures portfolio character without
+  // burning tokens on sub-1% tail positions in a max-45-stock portfolio.
+  const sorted = tickers
+    .map((t, i) => ({ t, w: weights[i] }))
+    .sort((a, b) => b.w - a.w)
+    .slice(0, 10);
+  const holdings = sorted.map(({ t, w }) => `${t}: ${(w * 100).toFixed(1)}%`).join(', ');
+  const posNote  = tickers.length > 10 ? ` (top 10 of ${tickers.length})` : '';
 
-  const prompt = `You are a concise financial analyst for Aurum, a portfolio optimisation engine.
-
-A user has optimised a portfolio using ${modeLabel} with these results:
-
-Holdings (${tickers.length} positions): ${holdings}
-
-Metrics:
-- Expected annual return: ${(metrics.ret * 100).toFixed(1)}%
-- Annual volatility: ${(metrics.risk * 100).toFixed(1)}%
-- Sharpe ratio: ${metrics.sharpe.toFixed(2)}
-- Est. max drawdown: -${(metrics.maxdd * 100).toFixed(1)}%
-
-Write exactly 3 sentences for a retail investor. First sentence: describe the portfolio's character (concentration, sector tilt, or style). Second sentence: explain the risk/return trade-off in plain terms. Third sentence: name one specific risk or opportunity to watch. Be direct. No filler. No bullet points. No financial advice disclaimers.`;
+  const prompt = `Portfolio optimised via ${modeLabel}${posNote}: ${holdings}. ` +
+    `Return ${(metrics.ret * 100).toFixed(1)}%, volatility ${(metrics.risk * 100).toFixed(1)}%, ` +
+    `Sharpe ${metrics.sharpe.toFixed(2)}, max drawdown -${(metrics.maxdd * 100).toFixed(1)}%. ` +
+    `Write exactly 3 sentences for a retail investor: (1) portfolio character — concentration or sector tilt; ` +
+    `(2) risk/return trade-off in plain terms; (3) one specific risk or opportunity to watch. ` +
+    `Be direct. No filler. No disclaimers.`;
 
   try {
     const geminiRes = await fetch(
@@ -91,34 +89,15 @@ Write exactly 3 sentences for a retail investor. First sentence: describe the po
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 180, temperature: 0.4 }
+          generationConfig: { maxOutputTokens: 120, temperature: 0.4 }
         })
       }
     );
 
     if (geminiRes.status === 429) {
-      // Free-tier RPM exhausted — wait 2 s and retry once
-      await new Promise(r => setTimeout(r, 2000));
-      const retry = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 180, temperature: 0.4 }
-          })
-        }
-      );
-      if (!retry.ok) {
-        console.error('[explain] Gemini 429 persisted after retry:', retry.status);
-        return res.status(429).json({ error: 'AI quota limit reached — try again in a minute' });
-      }
-      const retryData = await retry.json();
-      const retryText = retryData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-      if (!retryText) return res.status(502).json({ error: 'Empty AI response' });
-      res.setHeader('Cache-Control', 'no-store');
-      return res.status(200).json({ explanation: retryText });
+      const errBody = await geminiRes.json().catch(() => ({}));
+      console.error('[explain] Gemini 429 — quota details:', JSON.stringify(errBody));
+      return res.status(429).json({ error: 'AI quota limit reached — try again in a minute' });
     }
 
     if (!geminiRes.ok) {
