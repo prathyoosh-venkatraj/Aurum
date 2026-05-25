@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Aurum</title>
+  <meta name="robots" content="index, follow">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .privacy-wrap {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 80px 28px 80px;
+    }
+    .privacy-wrap h1 {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 1.8rem;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .privacy-meta {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 48px;
+    }
+    .privacy-wrap h2 {
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-top: 36px;
+      margin-bottom: 10px;
+      border-left: 2px solid var(--gold);
+      padding-left: 10px;
+    }
+    .privacy-wrap p, .privacy-wrap li {
+      font-family: var(--font-display);
+      font-size: 0.88rem;
+      font-weight: 400;
+      color: var(--text-dim);
+      line-height: 1.8;
+    }
+    .privacy-wrap ul {
+      padding-left: 1.4rem;
+      margin-top: 8px;
+    }
+    .privacy-wrap li {
+      margin-bottom: 6px;
+    }
+    .privacy-wrap a {
+      color: var(--gold-dim);
+      text-decoration: none;
+    }
+    .privacy-wrap a:hover {
+      color: var(--gold);
+      text-decoration: underline;
+    }
+    .privacy-wrap strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.82em;
+      color: var(--gold-dim);
+      background: var(--surface-2);
+      padding: 1px 5px;
+      border-radius: 2px;
+    }
+    .privacy-footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      display: flex;
+      gap: 24px;
+    }
+    .privacy-footer a {
+      color: var(--text-muted);
+    }
+    .privacy-footer a:hover {
+      color: var(--text-dim);
+    }
+  </style>
+  <!-- Sentry Error Tracking -->
+  <script src="https://js-de.sentry-cdn.com/b9a30eef033e9475dae8e10efcc222c4.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<header class="header">
+  <a href="index.html" class="logo-block" style="text-decoration:none;">
+    <span class="logo">AURUM</span>
+    <span class="logo-sub">Portfolio Optimisation Engine</span>
+  </a>
+  <div class="header-right">
+    <a href="index.html" class="portfolios-nav-btn">Back to App</a>
+    <a href="https://novasect.space" class="novasect-badge" target="_blank" rel="noopener noreferrer">
+      An instrument by NovaSect ↗
+    </a>
+  </div>
+</header>
+
+<main>
+  <div class="privacy-wrap">
+    <h1>Privacy Policy</h1>
+    <p class="privacy-meta">Last updated: 25 May 2026</p>
+
+    <p>Aurum (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) is a portfolio optimisation engine operated by NovaSect. This policy explains what data is collected when you use Aurum, by whom, and how it is used. Aurum does not sell data or run advertising.</p>
+
+    <h2>Authentication</h2>
+    <p>Access to Aurum is protected by a login gate. Upon successful authentication, a session cookie (<code>aurum_sess</code>) is issued. This cookie is:</p>
+    <ul>
+      <li>Cryptographically signed (HMAC-SHA256) and verified server-side on each request</li>
+      <li>Flagged <code>HttpOnly</code> — inaccessible to JavaScript running in the browser</li>
+      <li>Flagged <code>Secure</code> — transmitted over HTTPS only</li>
+      <li>Flagged <code>SameSite=Strict</code> — not sent on cross-site requests</li>
+      <li>Valid for 7 days, after which re-authentication is required</li>
+    </ul>
+    <p>No personal data is stored within the cookie — it contains only a signed user identifier and issuance timestamp.</p>
+
+    <h2>Browser Storage</h2>
+    <p>Aurum uses browser-local storage to preserve your session state across page reloads. No personal data is stored:</p>
+    <ul>
+      <li><strong>localStorage</strong> — stores your selected portfolio tickers (e.g. <code>["AAPL","MSFT"]</code>). This data never leaves your browser.</li>
+      <li><strong>sessionStorage</strong> — caches fetched price data, market cap weights, and risk-free rate values to reduce redundant API calls within a session. Cleared when the tab is closed.</li>
+    </ul>
+
+    <h2>Analytics — Umami</h2>
+    <p>Aurum uses <a href="https://umami.is" target="_blank" rel="noopener noreferrer">Umami</a> for privacy-friendly usage analytics. Umami:</p>
+    <ul>
+      <li>Does not use cookies</li>
+      <li>Does not collect personal data or persistent identifiers</li>
+      <li>Collects only aggregate metrics: page views, session counts, referrer, device type, and country (derived from IP, which is not stored)</li>
+      <li>Is fully compliant with GDPR, PECR, and CCPA — no consent banner is required</li>
+      <li>Data is stored in the EU (EU data region selected)</li>
+    </ul>
+    <p>See <a href="https://umami.is/privacy" target="_blank" rel="noopener noreferrer">Umami Privacy Policy</a>.</p>
+
+    <h2>Error Tracking — Sentry</h2>
+    <p>Aurum uses <a href="https://sentry.io" target="_blank" rel="noopener noreferrer">Sentry</a> to capture JavaScript errors and unhandled exceptions. When an error occurs, Sentry may collect:</p>
+    <ul>
+      <li>The error message and stack trace</li>
+      <li>Browser type and version, operating system</li>
+      <li>The URL where the error occurred</li>
+    </ul>
+    <p>We do not intentionally send personal data to Sentry. Error reports are used solely to diagnose and fix technical issues. See <a href="https://sentry.io/privacy/" target="_blank" rel="noopener noreferrer">Sentry Privacy Policy</a>.</p>
+
+    <h2>Market Data Sources</h2>
+    <p>Portfolio data is sourced from Yahoo Finance and FRED (Federal Reserve Bank of St. Louis) via serverless proxy endpoints. Your queries are forwarded to these services with no personal identifiers beyond standard request headers (IP address, User-Agent). These requests are not logged or retained by us.</p>
+
+    <h2>Third-Party Services</h2>
+    <ul>
+      <li><strong>Google Fonts</strong> — typography is loaded from <code>fonts.googleapis.com</code>. Google may log your IP address when serving font files. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a>.</li>
+      <li><strong>Vercel</strong> — Aurum is hosted on Vercel, which may collect server access logs (IP address, request path, timestamp) for operational purposes. See <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">Vercel Privacy Policy</a>.</li>
+    </ul>
+
+    <h2>Your Rights (EEA / UK)</h2>
+    <p>Aurum does not build user profiles or retain personal data beyond the session cookie described above. You may exercise your right to erasure at any time by logging out, which clears the session cookie. For data held by third-party services listed above, please contact those providers directly.</p>
+
+    <h2>Changes to This Policy</h2>
+    <p>We may update this policy as the platform evolves. The &ldquo;Last updated&rdquo; date at the top of this page will reflect any changes.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about this policy can be directed to: <strong>novasect.space@proton.me</strong></p>
+
+    <div class="privacy-footer">
+      <span>© 2026 NovaSect</span>
+      <a href="https://novasect.space/privacy.html" target="_blank" rel="noopener noreferrer">NovaSect Privacy Policy</a>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>
