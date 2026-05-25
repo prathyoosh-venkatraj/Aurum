@@ -85,7 +85,7 @@ Write exactly 3 sentences for a retail investor. First sentence: describe the po
 
   try {
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,8 +98,8 @@ Write exactly 3 sentences for a retail investor. First sentence: describe the po
 
     if (!geminiRes.ok) {
       const err = await geminiRes.json().catch(() => ({}));
-      console.error('[explain] Gemini error:', err);
-      return res.status(502).json({ error: 'AI service unavailable' });
+      console.error('[explain] Gemini error:', geminiRes.status, JSON.stringify(err));
+      return res.status(502).json({ error: `AI service unavailable (${geminiRes.status})` });
     }
 
     const data = await geminiRes.json();
