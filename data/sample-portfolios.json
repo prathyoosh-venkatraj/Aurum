@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-05-24",
+    "generated": "2026-05-25",
     "refresh_frequency": "weekly",
     "universe_version": "1.0.0",
     "universe_count": 500,
@@ -1290,11 +1290,11 @@
         }
       ],
       "stats": {
-        "expected_return": 0.0571,
-        "volatility": 0.1185,
-        "sharpe": 0.102,
-        "max_drawdown": -0.09,
-        "beta": 0.41
+        "expected_return": 0.0632,
+        "volatility": 0.12,
+        "sharpe": 0.152,
+        "max_drawdown": -0.087,
+        "beta": 0.44
       },
       "region_split": {
         "US": 0.97,
@@ -1445,11 +1445,11 @@
         }
       ],
       "stats": {
-        "expected_return": 0.1948,
-        "volatility": 0.1052,
-        "sharpe": 1.424,
-        "max_drawdown": -0.064,
-        "beta": -0.01
+        "expected_return": 0.2118,
+        "volatility": 0.1099,
+        "sharpe": 1.518,
+        "max_drawdown": -0.06,
+        "beta": -0.06
       },
       "region_split": {
         "US": 0.97,
@@ -1910,11 +1910,11 @@
         }
       ],
       "stats": {
-        "expected_return": 0.174,
-        "volatility": 0.1012,
-        "sharpe": 1.274,
-        "max_drawdown": -0.047,
-        "beta": 0.27
+        "expected_return": 0.1792,
+        "volatility": 0.1023,
+        "sharpe": 1.311,
+        "max_drawdown": -0.045,
+        "beta": 0.25
       },
       "region_split": {
         "US": 1,
