@@ -58,16 +58,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid metrics' });
   }
 
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  if (!GEMINI_API_KEY) return res.status(500).json({ error: 'AI service not configured' });
-  console.log('[explain] key length:', GEMINI_API_KEY.length, 'prefix:', GEMINI_API_KEY.slice(0, 8));
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
+  if (!GROQ_API_KEY) return res.status(500).json({ error: 'AI service not configured' });
 
   const modeLabel = mode === 'minVariance' ? 'Minimum Variance'
                   : mode === 'blackLitterman' ? 'Black-Litterman'
                   : 'Maximum Sharpe Ratio';
 
-  // Only send top 10 holdings by weight — captures portfolio character without
-  // burning tokens on sub-1% tail positions in a max-45-stock portfolio.
   const sorted = tickers
     .map((t, i) => ({ t, w: weights[i] }))
     .sort((a, b) => b.w - a.w)
@@ -83,30 +80,32 @@ export default async function handler(req, res) {
     `Be direct. No filler. No disclaimers.`;
 
   try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 120, temperature: 0.4 }
-        })
-      }
-    );
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 120,
+        temperature: 0.4
+      })
+    });
 
-    if (!geminiRes.ok) {
-      const errBody = await geminiRes.json().catch(() => ({}));
-      const geminiMsg = errBody?.error?.message || errBody?.error?.status || '';
-      console.error('[explain] Gemini error:', geminiRes.status, JSON.stringify(errBody));
-      if (geminiRes.status === 429) {
-        return res.status(429).json({ error: `Gemini quota: ${geminiMsg || 'rate limit exceeded'} — try again later` });
+    if (!groqRes.ok) {
+      const errBody = await groqRes.json().catch(() => ({}));
+      const groqMsg = errBody?.error?.message || '';
+      console.error('[explain] Groq error:', groqRes.status, JSON.stringify(errBody));
+      if (groqRes.status === 429) {
+        return res.status(429).json({ error: 'AI rate limit reached — try again in a moment' });
       }
-      return res.status(502).json({ error: `AI service unavailable (${geminiRes.status})${geminiMsg ? ': ' + geminiMsg : ''}` });
+      return res.status(502).json({ error: `AI service unavailable (${groqRes.status})${groqMsg ? ': ' + groqMsg : ''}` });
     }
 
-    const data = await geminiRes.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    const data = await groqRes.json();
+    const text = data?.choices?.[0]?.message?.content?.trim();
     if (!text) return res.status(502).json({ error: 'Empty AI response' });
 
     res.setHeader('Cache-Control', 'no-store');
