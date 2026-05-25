@@ -233,6 +233,13 @@ function showLibrary() {
 
 // ── Allocation math ────────────────────────────────────────────────────────
 
+// Maximum acceptable uninvested cash per tier bracket.
+function residualThreshold(tier) {
+  if (tier <= 1000) return 100;
+  if (tier <= 5000) return 500;
+  return 1000;
+}
+
 function computeAllocations(portfolio, tier) {
   const candidates = portfolio.tickers
     .filter(h => prices[h.ticker] && prices[h.ticker] > 0)
@@ -242,6 +249,7 @@ function computeAllocations(portfolio, tier) {
     .filter(h => !prices[h.ticker] || prices[h.ticker] <= 0)
     .map(h => ({ ...h, price: null, shares: 0, actual: 0 }));
 
+  // Initial weight-proportional allocation
   let holdings = candidates.map(h => {
     const shares = Math.floor(tier * h.weight / h.price);
     return { ...h, shares, actual: shares * h.price };
@@ -250,9 +258,8 @@ function computeAllocations(portfolio, tier) {
   const filledCount = holdings.filter(h => h.shares > 0).length;
   let isGreedy = false;
 
-  // Fall back to greedy when fewer than 3 positions fill via weight-proportional.
-  // Handles cases like shield at $1K where KO alone passes the floor check.
   if (filledCount < 3 && candidates.length > 0) {
+    // Budget-constrained fallback: buy 1 share per position in weight order
     isGreedy = true;
     let remaining = tier;
     const sorted  = [...candidates].sort((a, b) => b.weight - a.weight);
@@ -265,6 +272,45 @@ function computeAllocations(portfolio, tier) {
       shares: bought.has(h.ticker) ? 1 : 0,
       actual: bought.has(h.ticker) ? h.price : 0,
     }));
+  } else {
+    // Largest-remainder reinvestment: minimise idle cash without distorting weights.
+    //
+    // Pass 1 — give each position one bonus share ordered by its fractional
+    // shortfall (highest fraction = most deserving of the next share). This is
+    // Hamilton's method applied to share allocation.
+    //
+    // Pass 2 — cleanup: while residual ≥ threshold, buy the share of whichever
+    // affordable position is furthest below its proportional target.
+    const threshold = residualThreshold(tier);
+    let remaining = tier - holdings.reduce((s, h) => s + h.actual, 0);
+
+    if (remaining >= threshold) {
+      // Pass 1: LR sort — descending by fractional part of ideal share count
+      const lrOrder = [...holdings].sort((a, b) =>
+        ((tier * b.weight / b.price) - b.shares) - ((tier * a.weight / a.price) - a.shares)
+      );
+      for (const h of lrOrder) {
+        if (remaining < threshold) break;
+        if (h.price <= remaining) {
+          h.shares  += 1;
+          h.actual   = h.shares * h.price;
+          remaining -= h.price;
+        }
+      }
+
+      // Pass 2: cleanup — pick the most weight-deprived affordable position each round
+      while (remaining >= threshold) {
+        const pick = holdings
+          .filter(h => h.price <= remaining)
+          .sort((a, b) =>
+            ((tier * b.weight / b.price) - b.shares) - ((tier * a.weight / a.price) - a.shares)
+          )[0];
+        if (!pick) break;
+        pick.shares  += 1;
+        pick.actual   = pick.shares * pick.price;
+        remaining    -= pick.price;
+      }
+    }
   }
 
   const all     = [...holdings, ...noPriceItems];
