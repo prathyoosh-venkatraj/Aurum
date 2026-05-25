@@ -96,6 +96,31 @@ Write exactly 3 sentences for a retail investor. First sentence: describe the po
       }
     );
 
+    if (geminiRes.status === 429) {
+      // Free-tier RPM exhausted — wait 2 s and retry once
+      await new Promise(r => setTimeout(r, 2000));
+      const retry = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: 180, temperature: 0.4 }
+          })
+        }
+      );
+      if (!retry.ok) {
+        console.error('[explain] Gemini 429 persisted after retry:', retry.status);
+        return res.status(429).json({ error: 'AI quota limit reached — try again in a minute' });
+      }
+      const retryData = await retry.json();
+      const retryText = retryData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (!retryText) return res.status(502).json({ error: 'Empty AI response' });
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(200).json({ explanation: retryText });
+    }
+
     if (!geminiRes.ok) {
       const err = await geminiRes.json().catch(() => ({}));
       console.error('[explain] Gemini error:', geminiRes.status, JSON.stringify(err));

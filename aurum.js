@@ -125,6 +125,9 @@ function resetExplainPanel(result) {
       if (res.ok && data.explanation) {
         body.textContent = data.explanation;
         body.className   = 'ai-explain-body visible';
+      } else if (res.status === 429) {
+        body.textContent = 'AI quota limit reached — try again in a minute.';
+        body.className   = 'ai-explain-body error';
       } else {
         body.textContent = data.error || 'Could not generate explanation.';
         body.className   = 'ai-explain-body error';
