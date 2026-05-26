@@ -72,30 +72,36 @@ function projectToSimplex(v) {
 
 /**
  * Project v onto bounded simplex {w: 0 ≤ w_i ≤ maxWeight, Σw_i=1}.
- * Iterative: simplex project → clip excess → redistribute → repeat.
+ * Iterative: clip to cap → distribute deficit to free slots → repeat until sum=1.
+ *
+ * Using a deficit-based approach: after clipping, compute how much is "missing"
+ * from sum=1 and distribute to uncapped slots. Repeating handles cases where
+ * redistribution itself fills some slots to the cap.
  */
 function projectToSimplexBounded(v, maxWeight = 1.0) {
   if (maxWeight >= 1.0) return projectToSimplex(v);
   const n = v.length;
-  // If constraint is infeasible, relax maxWeight to 1/n so weights sum to 1
   const effectiveCap = Math.max(maxWeight, 1 / n);
-  let w = projectToSimplex(v);
+  // Start from unconstrained projection, clip to cap
+  let w = projectToSimplex(v).map(x => Math.min(effectiveCap, x));
 
-  for (let iter = 0; iter < 200; iter++) {
-    let excess = 0, freeCount = 0;
+  for (let iter = 0; iter < 500; iter++) {
+    const sum = w.reduce((s, x) => s + x, 0);
+    const deficit = 1 - sum;
+    if (Math.abs(deficit) < 1e-12) break;
+
+    // Distribute deficit to slots strictly below cap
+    const free = [];
     for (let i = 0; i < n; i++) {
-      if (w[i] > effectiveCap + 1e-10) { excess += w[i] - effectiveCap; w[i] = effectiveCap; }
-      else freeCount++;
+      if (w[i] < effectiveCap - 1e-12) free.push(i);
     }
-    if (excess < 1e-10) break;
-    if (freeCount === 0) break; // all slots capped; can't redistribute
-    const delta = excess / freeCount;
-    for (let i = 0; i < n; i++) {
-      if (w[i] < effectiveCap) w[i] = Math.min(effectiveCap, w[i] + delta);
-    }
+    if (free.length === 0) break; // all at cap; can't absorb more
+    const delta = deficit / free.length;
+    for (const i of free) w[i] = Math.min(effectiveCap, w[i] + delta);
   }
+
   const sum = w.reduce((s, x) => s + x, 0);
-  return sum > 1e-9 ? w.map(x => x / sum) : new Array(n).fill(1 / n);
+  return sum > 1e-9 ? w.map(x => x / sum) : new Array(n).fill(effectiveCap);
 }
 
 /**
@@ -461,3 +467,13 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
     muMV
   };
 }
+
+// Named exports for unit testing (worker.js only needs optimise)
+export {
+  buildMoments, regularise, covToCorr,
+  projectToSimplex, projectToSimplexBounded, enforceSectorCaps,
+  portfolioReturn, portfolioVariance, portfolioRisk, sharpeRatio,
+  marginalRiskContribution, maxDrawdown, portfolioVaR95,
+  computeEquilibriumReturns, blackLittermanPosterior,
+  solveMinVariance, solveMaxSharpe
+};
