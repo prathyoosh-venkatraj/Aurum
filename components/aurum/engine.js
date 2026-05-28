@@ -596,11 +596,12 @@ function covToCorr(Sigma) {
  */
 export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const {
-    views       = [],
-    mktWeights  = null,
-    maxWeight   = 1.0,
-    sectorCap   = 1.0,
-    sectorGroups = null
+    views        = [],
+    mktWeights   = null,
+    maxWeight    = 1.0,
+    sectorCap    = 1.0,
+    sectorGroups = null,
+    skipFrontier = false
   } = options;
 
   const { mu: muMV, Sigma: SigmaRaw } = buildMoments(alignedReturns);
@@ -630,7 +631,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const optimal = mode === 'minVariance'  ? wMinVar
                 : mode === 'riskParity'   ? wRiskParity
                 : wMaxSharpe;
-  const frontier = traceEfficientFrontier(mu, Sigma, rf, 60, maxWeight, sectorGroups, sectorCap);
+  const frontier = skipFrontier ? [] : traceEfficientFrontier(mu, Sigma, rf, 60, maxWeight, sectorGroups, sectorCap);
 
   const ret   = portfolioReturn(optimal, mu);
   const risk  = portfolioRisk(optimal, Sigma);

@@ -1094,7 +1094,10 @@ function drawPortfolioOverview(result, btResult) {
   }
 
   card.innerHTML = `
-    <div class="po-header">Portfolio Overview</div>
+    <div class="po-header">
+      <span>Portfolio Overview</span>
+      <button class="compare-trigger-btn" id="compare-trigger-btn">Compare All Modes →</button>
+    </div>
     <div class="po-summary">${n}-asset ${modeLabel} · ${pct(ret)} expected return · ${pct(risk)} volatility · Sharpe ${sharpe.toFixed(2)}</div>
     <div class="po-sections">
       ${rows.map(r => `
@@ -1105,6 +1108,10 @@ function drawPortfolioOverview(result, btResult) {
     </div>`;
 
   card.style.display = 'block';
+
+  document.getElementById('compare-trigger-btn')?.addEventListener('click', () => {
+    document.dispatchEvent(new CustomEvent('aurum:compare-requested'));
+  });
 }
 
 // ── Rebalancing Calculator ─────────────────────────────────────────────────

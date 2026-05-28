@@ -483,9 +483,6 @@ async function runOptimisation() {
 
     showResults(optResult, btResult, mcResult, alignedData.dates);
     drawRebalancing(optResult, alignedData.latestPrices);
-
-    const compareBtn = document.getElementById('compare-btn');
-    if (compareBtn) { compareBtn.style.display = 'block'; compareBtn.disabled = false; }
   };
 
   worker.onerror = (err) => {
@@ -547,8 +544,6 @@ function subscribeStateEvents() {
       hideResults();
       const freshnessEl = document.getElementById('data-freshness');
       if (freshnessEl) freshnessEl.textContent = '';
-      const compareBtn = document.getElementById('compare-btn');
-      if (compareBtn) compareBtn.style.display = 'none';
     }
     if (state.optimisationMode === 'blackLitterman') renderViews();
   });
@@ -570,8 +565,8 @@ function subscribeStateEvents() {
 async function runCompare() {
   if (!alignedData || !rf) return;
 
-  const compareBtn = document.getElementById('compare-btn');
-  if (compareBtn) { compareBtn.disabled = true; compareBtn.textContent = 'Computing…'; }
+  const triggerBtn = document.getElementById('compare-trigger-btn');
+  if (triggerBtn) { triggerBtn.disabled = true; triggerBtn.textContent = 'Computing…'; }
 
   const sectorGroups = buildSectorGroups(alignedData.tickers);
   const opts = {
@@ -579,7 +574,8 @@ async function runCompare() {
     sectorCap:    state.constraints.sectorCap,
     sectorGroups,
     views:        [],
-    mktWeights:   null
+    mktWeights:   null,
+    skipFrontier: true
   };
 
   // Yield to browser so the button state renders before heavy computation
@@ -593,12 +589,11 @@ async function runCompare() {
 
   drawComparePanel(results, state.optimisationMode);
 
-  if (compareBtn) { compareBtn.disabled = false; compareBtn.textContent = 'Compare All Modes'; }
+  if (triggerBtn) { triggerBtn.disabled = false; triggerBtn.textContent = 'Compare All Modes →'; }
 }
 
 function initCompareButton() {
-  const btn = document.getElementById('compare-btn');
-  if (btn) btn.addEventListener('click', runCompare);
+  document.addEventListener('aurum:compare-requested', () => runCompare());
 }
 
 // ── Auto-run from model portfolio ──────────────────────────────────────────
