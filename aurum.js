@@ -12,8 +12,9 @@ import {
   canRun, getFilteredTickers
 } from './components/aurum/state.js';
 
-import { fetchAlignedReturns, fetchRiskFreeRate, fetchMarketCaps } from './components/aurum/ingestion.js';
+import { fetchAlignedReturns, fetchRiskFreeRate, fetchMarketCaps, fetchBenchmarkReturns } from './components/aurum/ingestion.js';
 import { showResults, hideResults } from './components/aurum/renderer.js';
+import { computeBacktest } from './components/aurum/engine.js';
 
 // ── Load universe ──────────────────────────────────────────────────────────
 
@@ -440,7 +441,7 @@ async function runOptimisation() {
   setStatusLoading('Fetching price history…');
 
   const tickers = [...state.selectedTickers];
-  let alignedData, rf, mktWeights;
+  let alignedData, rf, mktWeights, benchmarkReturns;
 
   try {
     const result = await fetchAlignedReturns(tickers, (done, total) => {
@@ -449,7 +450,10 @@ async function runOptimisation() {
     alignedData = result;
 
     setStatusLoading('Fetching risk-free rate…');
-    rf = await fetchRiskFreeRate();
+    [rf, benchmarkReturns] = await Promise.all([
+      fetchRiskFreeRate(),
+      fetchBenchmarkReturns(alignedData.dates),
+    ]);
 
     if (state.optimisationMode === 'blackLitterman') {
       setStatusLoading('Fetching market caps…');
@@ -522,7 +526,16 @@ async function runOptimisation() {
     }
 
     setStatusOk(statusMsg);
-    showResults(optResult);
+
+    const btResult = computeBacktest(
+      optResult.optimal.weights,
+      alignedData.alignedReturns,
+      benchmarkReturns,
+      alignedData.dates,
+      rf
+    );
+
+    showResults(optResult, btResult, alignedData.dates);
     resetExplainPanel(optResult);
   };
 

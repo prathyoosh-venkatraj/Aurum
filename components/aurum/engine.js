@@ -167,6 +167,99 @@ function portfolioVaR95(annReturn, annRisk) {
   return -(annReturn / 252 - 1.645 * annRisk / Math.sqrt(252));
 }
 
+// ── Backtesting ────────────────────────────────────────────────────────────
+
+/**
+ * Compute realized backtest metrics over the history window.
+ *
+ * @param {number[]}   weights       N optimal weights (sum to 1)
+ * @param {number[][]} portLogRets   T×N aligned daily log returns
+ * @param {number[]}   benchLogRets  T daily log returns for benchmark (SPY)
+ * @param {string[]}   dates         T date strings 'YYYY-MM-DD'
+ * @param {number}     rf            Annual risk-free rate
+ */
+function computeBacktest(weights, portLogRets, benchLogRets, dates, rf) {
+  const T = portLogRets.length;
+
+  const portDaily  = portLogRets.map(day => dot(weights, day));
+  const benchDaily = benchLogRets;
+
+  // NAV series indexed to 1.0 — T+1 entries (initial + one per return day)
+  const portNav  = [1];
+  const benchNav = [1];
+  for (let t = 0; t < T; t++) {
+    portNav.push(portNav[t]   * Math.exp(portDaily[t]));
+    benchNav.push(benchNav[t] * Math.exp(benchDaily[t]));
+  }
+
+  const portTotal  = portNav[T] - 1;
+  const benchTotal = benchNav[T] - 1;
+
+  // Annualised geometric return
+  const portAnn  = Math.pow(Math.max(portNav[T],  1e-9), 252 / T) - 1;
+  const benchAnn = Math.pow(Math.max(benchNav[T], 1e-9), 252 / T) - 1;
+
+  function annVol(rets) {
+    const m = rets.reduce((s, x) => s + x, 0) / rets.length;
+    const v = rets.reduce((s, x) => s + (x - m) ** 2, 0) / Math.max(rets.length - 1, 1);
+    return Math.sqrt(v) * Math.sqrt(252);
+  }
+  const portVol  = annVol(portDaily);
+  const benchVol = annVol(benchDaily);
+
+  const portSharpe  = portVol  > 1e-9 ? (portAnn  - rf) / portVol  : 0;
+  const benchSharpe = benchVol > 1e-9 ? (benchAnn - rf) / benchVol : 0;
+
+  function mddFromNav(navArr) {
+    let peak = navArr[0], mdd = 0;
+    for (const nav of navArr) {
+      if (nav > peak) peak = nav;
+      const dd = (peak - nav) / peak;
+      if (dd > mdd) mdd = dd;
+    }
+    return mdd;
+  }
+  const portMDD  = mddFromNav(portNav);
+  const benchMDD = mddFromNav(benchNav);
+
+  const portCalmar = portMDD > 1e-9 ? portAnn / portMDD : 0;
+
+  const winDays = portDaily.filter((r, t) => r > benchDaily[t]).length;
+  const winRate = winDays / T;
+
+  const activeDaily = portDaily.map((r, t) => r - benchDaily[t]);
+  const activeAnn   = portAnn - benchAnn;
+  const trackingErr = annVol(activeDaily);
+  const infoRatio   = trackingErr > 1e-9 ? activeAnn / trackingErr : 0;
+
+  // Monthly returns: compound log returns per 'YYYY-MM'
+  const monthlyReturns = {};
+  let monthLogSum = 0, curMonth = null;
+  for (let t = 0; t < T; t++) {
+    const mo = dates[t].substring(0, 7);
+    if (curMonth && mo !== curMonth) {
+      monthlyReturns[curMonth] = Math.exp(monthLogSum) - 1;
+      monthLogSum = 0;
+    }
+    monthLogSum += portDaily[t];
+    curMonth = mo;
+  }
+  if (curMonth) monthlyReturns[curMonth] = Math.exp(monthLogSum) - 1;
+
+  return {
+    portNav, benchNav,
+    benchAvailable: benchDaily.some(r => r !== 0),
+    portTotal, benchTotal,
+    portAnn, benchAnn,
+    portVol, benchVol,
+    portSharpe, benchSharpe,
+    portMDD, benchMDD,
+    portCalmar, winRate,
+    trackingErr, infoRatio, activeAnn,
+    monthlyReturns,
+  };
+}
+
 // ── Black-Litterman ────────────────────────────────────────────────────────
 
 /**
@@ -468,12 +561,13 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   };
 }
 
-// Named exports for unit testing (worker.js only needs optimise)
+// Named exports for unit testing and main thread use (worker.js only needs optimise)
 export {
   buildMoments, regularise, covToCorr,
   projectToSimplex, projectToSimplexBounded, enforceSectorCaps,
   portfolioReturn, portfolioVariance, portfolioRisk, sharpeRatio,
   marginalRiskContribution, maxDrawdown, portfolioVaR95,
   computeEquilibriumReturns, blackLittermanPosterior,
-  solveMinVariance, solveMaxSharpe
+  solveMinVariance, solveMaxSharpe,
+  computeBacktest
 };

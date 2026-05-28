@@ -17,6 +17,7 @@ const BORDER     = '#1E1E1E';
 
 let _frontierChart = null;
 let _weightChart   = null;
+let _btChart       = null;
 
 function pct(v, dp = 1) { return `${(v * 100).toFixed(dp)}%`; }
 function fmt(v, dp = 2) { return v.toFixed(dp); }
@@ -579,71 +580,295 @@ export function drawBLPanel(result) {
 
   panel.style.display = 'block';
 
-  const { tickers, bl, muMV, optimal } = result;
+  const { tickers, bl, optimal } = result;
   const { equilibriumReturns, blReturns } = bl;
 
-  // Sort by BL return descending
   const rows = tickers.map((t, i) => ({
-    ticker:  t,
-    mv:      muMV[i],
-    eq:      equilibriumReturns[i],
-    bl:      blReturns[i],
-    weight:  optimal.weights[i]
+    ticker: t,
+    eq:     equilibriumReturns[i],
+    bl:     blReturns[i],
+    weight: optimal.weights[i],
   })).sort((a, b) => b.bl - a.bl);
 
-  const bar = (val, max, colour) => {
-    const w = Math.min(100, Math.abs(val / max) * 100).toFixed(1);
-    return `<span class="bl-bar" style="width:${w}%;background:${colour}"></span>`;
-  };
-
-  const maxAbs = Math.max(...rows.map(r => Math.max(Math.abs(r.eq), Math.abs(r.bl))));
-
   panel.innerHTML = `
-    <div class="panel-card-header">Black-Litterman Return Decomposition</div>
+    <div class="panel-card-header">
+      Black-Litterman Decomposition
+      <span class="panel-card-sub">how your views shift expected returns</span>
+    </div>
     <div class="bl-table-wrap">
       <table class="bl-table">
         <thead>
           <tr>
-            <th>Ticker</th>
-            <th>Historical μ</th>
-            <th>Equilibrium Π</th>
-            <th>BL Posterior</th>
-            <th>Δ vs Equil.</th>
-            <th>Weight</th>
+            <th class="bl-th-left">Asset</th>
+            <th class="bl-th-right">Mkt. Prior</th>
+            <th class="bl-th-right">BL Return</th>
+            <th class="bl-th-right">View Shift</th>
+            <th class="bl-th-right">Allocation</th>
           </tr>
         </thead>
         <tbody>
           ${rows.map(r => {
             const delta = r.bl - r.eq;
-            const deltaCol = delta >= 0 ? '#39FF14' : '#FF4D4D';
+            const dSign = delta >= 0 ? '+' : '';
+            const dCls  = delta >= 0 ? 'bl-pos' : 'bl-neg';
+            const wCls  = r.weight >= 0.05 ? 'bl-w-high' : '';
             return `
               <tr>
                 <td class="bl-ticker">${r.ticker}</td>
-                <td class="bl-num">${pct(r.mv)}</td>
-                <td class="bl-num">
-                  <div class="bl-bar-wrap">
-                    ${bar(r.eq, maxAbs, '#4488FF')}
-                    <span>${pct(r.eq)}</span>
-                  </div>
-                </td>
-                <td class="bl-num">
-                  <div class="bl-bar-wrap">
-                    ${bar(r.bl, maxAbs, GOLD)}
-                    <span>${pct(r.bl)}</span>
-                  </div>
-                </td>
-                <td class="bl-num" style="color:${deltaCol}">${delta >= 0 ? '+' : ''}${pct(delta)}</td>
-                <td class="bl-num">${r.weight > 0.001 ? pct(r.weight) : '—'}</td>
+                <td class="bl-num">${pct(r.eq)}</td>
+                <td class="bl-num bl-bl-val">${pct(r.bl)}</td>
+                <td class="bl-num ${dCls}">${dSign}${pct(delta)}</td>
+                <td class="bl-num ${wCls}">${r.weight > 0.001 ? pct(r.weight) : '—'}</td>
               </tr>`;
           }).join('')}
         </tbody>
       </table>
+    </div>
+    <div class="bl-legend">
+      <span class="bl-legend-item">
+        <span class="bl-legend-dot bl-legend-dot-muted"></span>
+        Mkt. Prior — CAPM equilibrium return implied by market-cap weights
+      </span>
+      <span class="bl-legend-item">
+        <span class="bl-legend-dot bl-legend-dot-gold"></span>
+        BL Return — posterior after blending your views with the market prior
+      </span>
     </div>`;
+}
+
+// ── Backtest ───────────────────────────────────────────────────────────────
+
+function s(v, dp = 1) { return (v >= 0 ? '+' : '') + (v * 100).toFixed(dp) + '%'; }
+
+function monthColour(ret) {
+  const t = Math.min(Math.abs(ret) / 0.10, 1);
+  if (ret >= 0) return `rgba(245,197,24,${(0.18 + t * 0.72).toFixed(2)})`;
+  return `rgba(255,77,77,${(0.18 + t * 0.72).toFixed(2)})`;
+}
+
+export function drawBacktest(btResult, dates, modelReturn) {
+  const card = document.getElementById('backtest-card');
+  if (!card) return;
+
+  const {
+    portNav, benchNav, benchAvailable,
+    portTotal, benchTotal,
+    portAnn, benchAnn,
+    portVol, benchVol,
+    portSharpe, benchSharpe,
+    portMDD, benchMDD,
+    portCalmar, winRate,
+    trackingErr, infoRatio, activeAnn,
+    monthlyReturns,
+  } = btResult;
+
+  const T = dates.length;
+
+  // ── Build monthly heatmap HTML ──────────────────────────────────────────
+
+  const MO_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const byYear = {};
+  for (const [key, ret] of Object.entries(monthlyReturns)) {
+    const [yr, mo] = key.split('-');
+    if (!byYear[yr]) byYear[yr] = {};
+    byYear[yr][mo] = ret;
+  }
+  const years = Object.keys(byYear).sort();
+
+  const headerRow = `
+    <div class="bt-mh-row">
+      <div class="bt-mh-year"></div>
+      ${MO_NAMES.map(m => `<div class="bt-mh-month-lbl">${m}</div>`).join('')}
+    </div>`;
+
+  const dataRows = years.map(yr => {
+    const cells = MO_NAMES.map((_, i) => {
+      const moKey = String(i + 1).padStart(2, '0');
+      const ret   = byYear[yr][moKey];
+      if (ret === undefined) return `<div class="bt-mh-cell"></div>`;
+      const bg    = monthColour(ret);
+      const txt   = Math.abs(ret) >= 0.005 ? `${ret >= 0 ? '+' : ''}${(ret * 100).toFixed(1)}%` : '';
+      const cls   = ret >= 0 ? 'bt-mh-pos' : 'bt-mh-neg';
+      return `<div class="bt-mh-cell ${cls}" style="background:${bg}" title="${(ret*100).toFixed(2)}%">${txt}</div>`;
+    }).join('');
+    return `<div class="bt-mh-row"><div class="bt-mh-year">${yr}</div>${cells}</div>`;
+  }).join('');
+
+  // ── Metrics rows ────────────────────────────────────────────────────────
+
+  const sign   = v => v >= 0 ? 'bt-pos' : 'bt-neg';
+  const na     = benchAvailable ? '' : ' (SPY unavailable)';
+  const pctFmt = (v, dp = 1) => `${(v * 100).toFixed(dp)}%`;
+
+  const modelVsReal = modelReturn !== undefined
+    ? `<tr>
+         <td class="bt-row-lbl">Model vs Realized</td>
+         <td class="bt-port-col ${sign(portAnn - modelReturn)}">${s(portAnn - modelReturn)}</td>
+         <td class="bt-bench-col">—</td>
+         <td class="bt-active-col">—</td>
+       </tr>`
+    : '';
+
+  const rows = [
+    ['Total Return (1Y)',  s(portTotal),       benchAvailable ? s(benchTotal) : '—',  benchAvailable ? `<span class="${sign(activeAnn)}">${s(activeAnn)}</span>` : '—'],
+    ['Ann. Return',        s(portAnn),         benchAvailable ? s(benchAnn)   : '—',  '—'],
+    ['Volatility',         pctFmt(portVol),    benchAvailable ? pctFmt(benchVol) : '—', '—'],
+    ['Sharpe (realized)',  portSharpe.toFixed(2), benchAvailable ? benchSharpe.toFixed(2) : '—', '—'],
+    ['Max Drawdown',       `-${pctFmt(portMDD)}`, benchAvailable ? `-${pctFmt(benchMDD)}` : '—', '—'],
+    ['Calmar Ratio',       portCalmar.toFixed(2), '—', '—'],
+    ['Win Rate vs SPY',    benchAvailable ? pctFmt(winRate) : '—', '—', '—'],
+    ['Tracking Error',     benchAvailable ? pctFmt(trackingErr) : '—', '—', '—'],
+    ['Info. Ratio',        benchAvailable ? infoRatio.toFixed(2) : '—', '—', '—'],
+  ].map(([lbl, port, bench, active]) => `
+    <tr>
+      <td class="bt-row-lbl">${lbl}</td>
+      <td class="bt-port-col">${port}</td>
+      <td class="bt-bench-col">${bench}</td>
+      <td class="bt-active-col">${active}</td>
+    </tr>`).join('');
+
+  // ── Render card ─────────────────────────────────────────────────────────
+
+  const deltaSign = benchAvailable ? sign(portTotal - benchTotal) : '';
+  const deltaTxt  = benchAvailable
+    ? `<span class="${deltaSign}">${s(portTotal - benchTotal)} vs SPY</span>`
+    : '';
+
+  card.style.display = 'block';
+  card.innerHTML = `
+    <div class="bt-header">
+      <span class="panel-card-header">Historical Performance&ensp;<span class="bt-window">(1Y backtest, ${T} trading days)</span></span>
+      <span class="bt-delta">${deltaTxt}</span>
+    </div>
+
+    <div class="bt-nav-wrap">
+      <canvas id="bt-nav-chart"></canvas>
+    </div>
+
+    <div class="bt-table-wrap">
+      <table class="bt-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Portfolio</th>
+            <th>SPY${na}</th>
+            <th>Active</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${modelVsReal}
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bt-monthly-label">Monthly Returns</div>
+    <div class="bt-mh-grid">
+      ${headerRow}
+      ${dataRows}
+    </div>`;
+
+  // ── Draw NAV chart ───────────────────────────────────────────────────────
+
+  const ctx = document.getElementById('bt-nav-chart');
+  if (!ctx) return;
+  if (_btChart) { _btChart.destroy(); _btChart = null; }
+
+  // Downsample labels: only show ~8 date ticks to avoid crowding
+  const step    = Math.max(1, Math.floor(T / 8));
+  const labels  = ['Start', ...dates].map((d, i) =>
+    (i === 0 || i === T || (i - 1) % step === 0) ? (d === 'Start' ? 'Start' : d.slice(5)) : ''
+  );
+
+  const portNavDisplay  = portNav.map(v => +(v * 100).toFixed(3));
+  const benchNavDisplay = benchNav.map(v => +(v * 100).toFixed(3));
+
+  const datasets = [{
+    label: 'Portfolio',
+    data: portNavDisplay,
+    borderColor: GOLD,
+    borderWidth: 2,
+    backgroundColor: 'rgba(245,197,24,0.06)',
+    fill: false,
+    pointRadius: 0,
+    tension: 0.2,
+    order: 1,
+  }];
+
+  if (benchAvailable) {
+    datasets.push({
+      label: 'SPY',
+      data: benchNavDisplay,
+      borderColor: '#555',
+      borderWidth: 1.5,
+      backgroundColor: 'transparent',
+      fill: false,
+      pointRadius: 0,
+      tension: 0.2,
+      order: 2,
+    });
+  }
+
+  _btChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      plugins: {
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: {
+            color: TEXT_DIM,
+            font: { family: "'JetBrains Mono', monospace", size: 10 },
+            boxWidth: 20,
+            padding: 12,
+          }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: '#111',
+          borderColor: BORDER,
+          borderWidth: 1,
+          titleColor: GOLD,
+          bodyColor: TEXT_DIM,
+          titleFont: { family: "'JetBrains Mono', monospace", size: 10 },
+          bodyFont:  { family: "'JetBrains Mono', monospace", size: 10 },
+          callbacks: {
+            title: items => items[0]?.label || '',
+            label: ctx  => `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}`,
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: BORDER },
+          ticks: {
+            color: TEXT_DIM,
+            font: { family: "'JetBrains Mono', monospace", size: 9 },
+            maxRotation: 0,
+            autoSkip: false,
+          }
+        },
+        y: {
+          grid: { color: BORDER },
+          ticks: {
+            color: TEXT_DIM,
+            font: { family: "'JetBrains Mono', monospace", size: 10 },
+            callback: v => v.toFixed(0),
+          }
+        }
+      }
+    }
+  });
 }
 
 // ── Show/hide results ──────────────────────────────────────────────────────
 
-export function showResults(result) {
+export function showResults(result, btResult, dates) {
   const emptyState     = document.getElementById('empty-state');
   const resultsContent = document.getElementById('results-content');
   if (emptyState)     emptyState.style.display = 'none';
@@ -655,6 +880,7 @@ export function showResults(result) {
   drawHeatmap(result);
   drawCorrelationInsights(result);
   drawBLPanel(result);
+  if (btResult && dates) drawBacktest(btResult, dates, result.optimal.return);
 }
 
 export function hideResults() {
@@ -665,4 +891,7 @@ export function hideResults() {
 
   const blPanel = document.getElementById('bl-panel');
   if (blPanel) blPanel.style.display = 'none';
+
+  const btCard = document.getElementById('backtest-card');
+  if (btCard) btCard.style.display = 'none';
 }

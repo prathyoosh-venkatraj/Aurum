@@ -221,6 +221,55 @@ export async function fetchMarketCaps(tickers, universe) {
 }
 
 /**
+ * Align SPY prices to a portfolio date array and return daily log returns.
+ * spyDates/spyPrices are in chronological order from Yahoo Finance.
+ */
+function alignBenchmarkToDates(spyDates, spyPrices, portDates) {
+  const priceMap    = new Map();
+  const prevPriceMap = new Map();
+  for (let i = 0; i < spyDates.length; i++) {
+    priceMap.set(spyDates[i], spyPrices[i]);
+    if (i > 0) prevPriceMap.set(spyDates[i], spyPrices[i - 1]);
+  }
+  return portDates.map(d => {
+    const p1 = priceMap.get(d);
+    const p0 = prevPriceMap.get(d);
+    return (p0 > 0 && p1 > 0) ? Math.log(p1 / p0) : 0;
+  });
+}
+
+/**
+ * Fetch SPY benchmark daily log returns aligned to the portfolio date array.
+ * Uses same IndexedDB cache (24h TTL) as ticker history.
+ *
+ * @param {string[]} dates  Date array from fetchAlignedReturns
+ * @returns {number[]}      T-length array of daily log returns (0 if SPY unavailable)
+ */
+export async function fetchBenchmarkReturns(dates) {
+  const BENCH_KEY = '__SPY_BENCH__';
+
+  const cached = await idbGet(BENCH_KEY);
+  if (cached && typeof cached.fetchedAt === 'number' && (Date.now() - cached.fetchedAt) < CACHE_TTL) {
+    return alignBenchmarkToDates(cached.dates, cached.prices, dates);
+  }
+
+  let res;
+  try { res = await fetch('/api/yahoo-proxy?symbol=SPY&mode=history&range=1y'); }
+  catch { return new Array(dates.length).fill(0); }
+
+  if (!res.ok || res.status === 204) return new Array(dates.length).fill(0);
+
+  const data = await res.json();
+  if (!data.series || data.series.length < 30) return new Array(dates.length).fill(0);
+
+  const spyDates  = data.series.map(p => p.date);
+  const spyPrices = data.series.map(p => p.adjClose);
+
+  await idbPut({ ticker: BENCH_KEY, dates: spyDates, prices: spyPrices, fetchedAt: Date.now() });
+  return alignBenchmarkToDates(spyDates, spyPrices, dates);
+}
+
+/**
  * Fetch US 10Y Treasury yield from FRED proxy.
  * Cached in sessionStorage for 24h.
  */
