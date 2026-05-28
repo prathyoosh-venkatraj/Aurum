@@ -178,7 +178,10 @@
       <div class="frontier-card">
         <div class="panel-card-header" style="display:flex;align-items:center;justify-content:space-between;">
           <span>Efficient Frontier</span>
-          <span id="data-freshness" class="data-freshness"></span>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <span id="data-freshness" class="data-freshness"></span>
+            <button id="export-btn" class="export-btn" style="display:none;">Export Report</button>
+          </div>
         </div>
         <div class="frontier-chart-wrap">
           <canvas id="frontier-chart"></canvas>

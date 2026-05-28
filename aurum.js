@@ -15,6 +15,7 @@ import {
 import { fetchAlignedReturns, fetchRiskFreeRate, fetchMarketCaps, fetchBenchmarkReturns } from './components/aurum/ingestion.js';
 import { showResults, hideResults, drawRebalancing, drawComparePanel } from './components/aurum/renderer.js';
 import { computeBacktest, runMonteCarlo, optimise } from './components/aurum/engine.js';
+import { generateReport } from './components/aurum/exporter.js';
 
 // ── Load universe ──────────────────────────────────────────────────────────
 
@@ -365,10 +366,14 @@ function buildSectorGroups(tickers) {
   return groups;
 }
 
-// ── Module-level run state (shared between runOptimisation and runCompare) ──
+// ── Module-level run state (shared between runOptimisation, runCompare, export) ──
 
-let alignedData      = null;
-let rf               = null;
+let alignedData          = null;
+let rf                   = null;
+let _lastOptResult       = null;
+let _lastBtResult        = null;
+let _lastMcResult        = null;
+let _lastCompareResults  = null;
 
 // ── Run optimisation ───────────────────────────────────────────────────────
 
@@ -481,9 +486,16 @@ async function runOptimisation() {
       optResult.Sigma
     );
 
+    _lastOptResult = optResult;
+    _lastBtResult  = btResult;
+    _lastMcResult  = mcResult;
+
     showResults(optResult, btResult, mcResult, alignedData.dates);
     drawRebalancing(optResult, alignedData.latestPrices);
     setTimeout(() => runCompare(), 0);
+
+    const exportBtn = document.getElementById('export-btn');
+    if (exportBtn) exportBtn.style.display = 'inline-block';
   };
 
   worker.onerror = (err) => {
@@ -588,11 +600,32 @@ async function runCompare() {
     catch { return null; }
   });
 
+  _lastCompareResults = results;
   drawComparePanel(results, state.optimisationMode);
 
   if (triggerBtn) { triggerBtn.disabled = false; triggerBtn.textContent = 'Compare All Modes →'; }
 }
 
+
+// ── Export ─────────────────────────────────────────────────────────────────
+
+function initExportButton() {
+  const btn = document.getElementById('export-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    if (!_lastOptResult) return;
+    const rebalValue = parseFloat(document.getElementById('rebal-value')?.value) || 10000;
+    generateReport({
+      optResult:      _lastOptResult,
+      btResult:       _lastBtResult,
+      mcResult:       _lastMcResult,
+      compareResults: _lastCompareResults,
+      alignedData,
+      rf,
+      rebalValue,
+    });
+  });
+}
 
 // ── Auto-run from model portfolio ──────────────────────────────────────────
 
@@ -633,5 +666,6 @@ async function autoRunFromPortfolio() {
   renderPortfolio();
   updateRunButton();
   updateCountLabel();
+  initExportButton();
   await autoRunFromPortfolio();
 })();
