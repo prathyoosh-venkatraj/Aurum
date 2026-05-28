@@ -13,8 +13,8 @@ import {
 } from './components/aurum/state.js';
 
 import { fetchAlignedReturns, fetchRiskFreeRate, fetchMarketCaps, fetchBenchmarkReturns } from './components/aurum/ingestion.js';
-import { showResults, hideResults, drawRebalancing } from './components/aurum/renderer.js';
-import { computeBacktest, runMonteCarlo } from './components/aurum/engine.js';
+import { showResults, hideResults, drawRebalancing, drawComparePanel } from './components/aurum/renderer.js';
+import { computeBacktest, runMonteCarlo, optimise } from './components/aurum/engine.js';
 
 // ── Load universe ──────────────────────────────────────────────────────────
 
@@ -478,6 +478,9 @@ async function runOptimisation() {
 
     showResults(optResult, btResult, mcResult, alignedData.dates);
     drawRebalancing(optResult, alignedData.latestPrices);
+
+    const compareBtn = document.getElementById('compare-btn');
+    if (compareBtn) { compareBtn.style.display = 'block'; compareBtn.disabled = false; }
   };
 
   worker.onerror = (err) => {
@@ -539,6 +542,8 @@ function subscribeStateEvents() {
       hideResults();
       const freshnessEl = document.getElementById('data-freshness');
       if (freshnessEl) freshnessEl.textContent = '';
+      const compareBtn = document.getElementById('compare-btn');
+      if (compareBtn) compareBtn.style.display = 'none';
     }
     if (state.optimisationMode === 'blackLitterman') renderViews();
   });
@@ -553,6 +558,42 @@ function subscribeStateEvents() {
   });
 
   on('viewsChanged', () => renderViews());
+}
+
+// ── Compare All Modes ──────────────────────────────────────────────────────
+
+async function runCompare() {
+  if (!alignedData || !rf) return;
+
+  const compareBtn = document.getElementById('compare-btn');
+  if (compareBtn) { compareBtn.disabled = true; compareBtn.textContent = 'Computing…'; }
+
+  const sectorGroups = buildSectorGroups(alignedData.tickers);
+  const opts = {
+    maxWeight:    state.constraints.maxWeight,
+    sectorCap:    state.constraints.sectorCap,
+    sectorGroups,
+    views:        [],
+    mktWeights:   null
+  };
+
+  // Yield to browser so the button state renders before heavy computation
+  await new Promise(r => setTimeout(r, 0));
+
+  const MODES = ['maxSharpe', 'minVariance', 'riskParity', 'blackLitterman'];
+  const results = MODES.map(mode => {
+    try { return optimise(alignedData.alignedReturns, alignedData.tickers, rf, mode, opts); }
+    catch { return null; }
+  });
+
+  drawComparePanel(results, state.optimisationMode);
+
+  if (compareBtn) { compareBtn.disabled = false; compareBtn.textContent = 'Compare All Modes'; }
+}
+
+function initCompareButton() {
+  const btn = document.getElementById('compare-btn');
+  if (btn) btn.addEventListener('click', runCompare);
 }
 
 // ── Auto-run from model portfolio ──────────────────────────────────────────
@@ -594,5 +635,6 @@ async function autoRunFromPortfolio() {
   renderPortfolio();
   updateRunButton();
   updateCountLabel();
+  initCompareButton();
   await autoRunFromPortfolio();
 })();

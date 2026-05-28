@@ -1223,6 +1223,88 @@ export function drawRebalancing(result, latestPrices) {
   updateRebalTable(10000);
 }
 
+// ── Mode Comparison panel ──────────────────────────────────────────────────
+
+export function drawComparePanel(modeResults, activeMode) {
+  const card = document.getElementById('compare-card');
+  if (!card) return;
+
+  const MODE_KEYS   = ['maxSharpe', 'minVariance', 'riskParity', 'blackLitterman'];
+  const MODE_LABELS = ['Max Sharpe', 'Min Variance', 'Risk Parity', 'Black-Litterman'];
+
+  const headerCells = MODE_KEYS.map((k, i) => {
+    const cls = k === activeMode ? ' class="cmp-active"' : '';
+    return `<th${cls}>${MODE_LABELS[i]}</th>`;
+  }).join('');
+
+  function cell(value, isActive, extraClass = '') {
+    const cls = ['cmp-active' && isActive ? 'cmp-active' : '', extraClass]
+      .filter(Boolean).join(' ');
+    return `<td${cls ? ` class="${cls}"` : ''}>${value}</td>`;
+  }
+
+  function metricRow(label, fn) {
+    const cells = MODE_KEYS.map((k, i) => {
+      const r = modeResults[i];
+      const isActive = k === activeMode;
+      if (!r) return `<td class="${isActive ? 'cmp-active' : ''}">—</td>`;
+      return fn(r, isActive, k);
+    }).join('');
+    return `<tr><td>${label}</td>${cells}</tr>`;
+  }
+
+  const rows = [
+    metricRow('Ann. Return', (r, active) => {
+      const v = r.optimal.return;
+      const cls = (active ? 'cmp-active ' : '') + (v >= 0 ? 'cmp-pos' : 'cmp-neg');
+      return `<td class="${cls}">${(v >= 0 ? '+' : '') + pct(v)}</td>`;
+    }),
+    metricRow('Volatility', (r, active) => {
+      const cls = active ? 'cmp-active' : '';
+      return `<td${cls ? ` class="${cls}"` : ''}>${pct(r.optimal.risk)}</td>`;
+    }),
+    metricRow('Sharpe Ratio', (r, active) => {
+      const v = r.optimal.sharpe;
+      const cls = (active ? 'cmp-active ' : '') + (v >= 1 ? 'cmp-pos' : v < 0.5 ? 'cmp-neg' : '');
+      return `<td class="${cls.trim()}">${v.toFixed(2)}</td>`;
+    }),
+    metricRow('Max Drawdown', (r, active) => {
+      const cls = active ? 'cmp-active cmp-neg' : 'cmp-neg';
+      return `<td class="${cls}">-${pct(r.optimal.maxDrawdown)}</td>`;
+    }),
+    metricRow('VaR 95% (1d)', (r, active) => {
+      const cls = active ? 'cmp-active cmp-neg' : 'cmp-neg';
+      return `<td class="${cls}">-${pct(r.optimal.var95)}</td>`;
+    }),
+    metricRow('Top Holdings', (r, active) => {
+      const top = [...r.optimal.assets]
+        .filter(a => a.weight > 0.001)
+        .sort((a, b) => b.weight - a.weight)
+        .slice(0, 3)
+        .map(a => `${a.ticker} ${pct(a.weight, 0)}`);
+      const innerCls = active ? 'compare-top cmp-active' : 'compare-top';
+      return `<td><div class="${innerCls}">${top.join('<br>')}</div></td>`;
+    })
+  ].join('');
+
+  card.innerHTML = `
+    <div class="compare-header">
+      <span class="compare-title">Mode Comparison</span>
+      <button class="compare-close" id="compare-close-btn">✕</button>
+    </div>
+    <table class="compare-table">
+      <thead><tr><th></th>${headerCells}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="compare-note">* Black-Litterman shown using CAPM market prior (no user views). Add views in BL mode to differentiate.</div>`;
+
+  card.style.display = 'block';
+
+  document.getElementById('compare-close-btn')?.addEventListener('click', () => {
+    card.style.display = 'none';
+  });
+}
+
 // ── Show/hide results ──────────────────────────────────────────────────────
 
 export function showResults(result, btResult, mcResult, dates) {
@@ -1262,4 +1344,7 @@ export function hideResults() {
 
   const btCard = document.getElementById('backtest-card');
   if (btCard) btCard.style.display = 'none';
+
+  const compareCard = document.getElementById('compare-card');
+  if (compareCard) compareCard.style.display = 'none';
 }
