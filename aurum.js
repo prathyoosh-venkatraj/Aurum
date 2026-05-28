@@ -447,8 +447,9 @@ async function runOptimisation() {
       freshnessEl.textContent = `Data as of ${formatDate(lastDate)} · ${suffix}`;
     }
 
-    const modeTag = optResult.mode === 'blackLitterman' ? 'BL' :
-                    optResult.mode === 'minVariance'    ? 'MinVar' : 'MaxSharpe';
+    const modeTag = optResult.mode === 'blackLitterman' ? 'BL'         :
+                    optResult.mode === 'minVariance'    ? 'MinVar'     :
+                    optResult.mode === 'riskParity'     ? 'RiskParity' : 'MaxSharpe';
 
     let statusMsg =
       `Done [${modeTag}] — ${optResult.tickers.length} assets · ` +

@@ -136,6 +136,41 @@ function projectConstrained(v, maxWeight, sectorGroups, sectorCap) {
   return enforceSectorCaps(w, sectorGroups, sectorCap);
 }
 
+/**
+ * Solve Equal Risk Contribution (Risk Parity) via cyclical coordinate descent.
+ * Target: w[i] * (Σw)[i] = portVar/N  for all i.
+ * Iterates until max weight-change < tol, then applies constraints.
+ */
+function solveRiskParity(Sigma, maxWeight, sectorGroups, sectorCap, maxIter = 600, tol = 1e-12) {
+  const n = Sigma.length;
+  let w = new Array(n).fill(1 / n);
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    const wPrev = [...w];
+    const Sw = matVec(Sigma, w);
+    const portVar = dot(w, Sw);
+    const target = portVar / n;
+
+    for (let i = 0; i < n; i++) {
+      // Solve: (Sigma[i][i]*w[i]^2 + b*w[i]) / sigma = target  (ERC condition linearised)
+      // => Sigma[i][i]*w[i]^2 + b*w[i] - target = 0
+      let b = 0;
+      for (let j = 0; j < n; j++) if (j !== i) b += Sigma[i][j] * w[j];
+      const a = Sigma[i][i];
+      const disc = b * b + 4 * a * target;
+      w[i] = Math.max(1e-8, (-b + Math.sqrt(Math.max(0, disc))) / (2 * a));
+    }
+
+    const sum = w.reduce((s, x) => s + x, 0);
+    if (sum > 1e-9) w = w.map(x => x / sum);
+
+    const maxDelta = w.reduce((m, wi, i) => Math.max(m, Math.abs(wi - wPrev[i])), 0);
+    if (maxDelta < tol) break;
+  }
+
+  return projectConstrained(w, maxWeight, sectorGroups, sectorCap);
+}
+
 // ── Portfolio statistics ───────────────────────────────────────────────────
 
 function portfolioReturn(w, mu)   { return dot(w, mu); }
@@ -587,9 +622,14 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
 
   const wMinVar    = solveMinVariance(Sigma, 3000, 1e-10, maxWeight, sectorGroups, sectorCap);
   const wMaxSharpe = solveMaxSharpe(mu, Sigma, rf, 4000, 1e-10, maxWeight, sectorGroups, sectorCap);
+  const wRiskParity = mode === 'riskParity'
+    ? solveRiskParity(Sigma, maxWeight, sectorGroups, sectorCap)
+    : null;
 
   // For BL mode the "optimal" is max-Sharpe on the posterior mu
-  const optimal = mode === 'minVariance' ? wMinVar : wMaxSharpe;
+  const optimal = mode === 'minVariance'  ? wMinVar
+                : mode === 'riskParity'   ? wRiskParity
+                : wMaxSharpe;
   const frontier = traceEfficientFrontier(mu, Sigma, rf, 60, maxWeight, sectorGroups, sectorCap);
 
   const ret   = portfolioReturn(optimal, mu);
@@ -631,6 +671,6 @@ export {
   portfolioReturn, portfolioVariance, portfolioRisk, sharpeRatio,
   marginalRiskContribution, maxDrawdown, portfolioVaR95,
   computeEquilibriumReturns, blackLittermanPosterior,
-  solveMinVariance, solveMaxSharpe,
+  solveMinVariance, solveMaxSharpe, solveRiskParity,
   computeBacktest, runMonteCarlo
 };

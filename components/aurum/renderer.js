@@ -46,8 +46,9 @@ export function drawFrontier(result) {
   const msPoint  = { x: anchors.maxSharpe.risk * 100,   y: anchors.maxSharpe.return * 100 };
   const optPoint = { x: optimal.risk * 100,              y: optimal.return * 100 };
 
-  const modeLabel = mode === 'minVariance' ? 'Optimal (MinVar)' :
-                    mode === 'blackLitterman' ? 'Optimal (BL)' : 'Optimal (MaxSharpe)';
+  const modeLabel = mode === 'minVariance'   ? 'Optimal (MinVar)'  :
+                    mode === 'blackLitterman' ? 'Optimal (BL)'      :
+                    mode === 'riskParity'     ? 'Optimal (RP)'      : 'Optimal (MaxSharpe)';
 
   // Capital Market Line: extends from the risk-free rate through the Max Sharpe point
   const rfPct    = (rf || 0.045) * 100;
@@ -1020,6 +1021,7 @@ function drawPortfolioOverview(result, btResult) {
 
   const modeLabel = mode === 'minVariance'    ? 'Minimum Variance'
                   : mode === 'blackLitterman' ? 'Black-Litterman'
+                  : mode === 'riskParity'     ? 'Risk Parity'
                   : 'Maximum Sharpe';
 
   const active = [...assets].filter(a => a.weight > 0.001).sort((a, b) => b.weight - a.weight);
@@ -1065,6 +1067,19 @@ function drawPortfolioOverview(result, btResult) {
     rows.push({
       label: 'Realized (1Y)',
       text: `Historical backtest: ${(portAnn >= 0 ? '+' : '') + pct(portAnn)} return${vsStr}, ${pct(portMDD)} max drawdown, ${(winRate * 100).toFixed(0)}% daily win rate`
+    });
+  }
+
+  if (mode === 'riskParity') {
+    const mrcArr = assets.map(a => a.mrc);
+    const totalMRC = mrcArr.reduce((s, v) => s + Math.abs(v), 0);
+    const maxMRC = Math.max(...mrcArr.map(v => Math.abs(v)));
+    const minMRC = Math.min(...mrcArr.map(v => Math.abs(v)));
+    const spreadPct = totalMRC > 1e-9 ? (((maxMRC - minMRC) / totalMRC) * 100).toFixed(1) : '0.0';
+    const topRC = [...assets].sort((a, b) => Math.abs(b.mrc) - Math.abs(a.mrc)).slice(0, 2);
+    rows.push({
+      label: 'Risk Contribution',
+      text: `Risk equalized across ${active.length} assets — max-to-min spread ${spreadPct}% of total risk; largest contributors: ${topRC.map(a => a.ticker).join(', ')}`
     });
   }
 
