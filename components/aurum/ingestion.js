@@ -173,7 +173,10 @@ export async function fetchAlignedReturns(tickers, onProgress) {
     );
   }
 
-  return { tickers: validTickers, dates, alignedReturns };
+  // Latest adjusted-close price per ticker (last element of each price series)
+  const latestPrices = histories.map(h => h.prices[h.prices.length - 1] ?? null);
+
+  return { tickers: validTickers, dates, alignedReturns, latestPrices };
 }
 
 /**

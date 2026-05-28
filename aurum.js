@@ -13,7 +13,7 @@ import {
 } from './components/aurum/state.js';
 
 import { fetchAlignedReturns, fetchRiskFreeRate, fetchMarketCaps, fetchBenchmarkReturns } from './components/aurum/ingestion.js';
-import { showResults, hideResults } from './components/aurum/renderer.js';
+import { showResults, hideResults, drawRebalancing } from './components/aurum/renderer.js';
 import { computeBacktest, runMonteCarlo } from './components/aurum/engine.js';
 
 // ── Load universe ──────────────────────────────────────────────────────────
@@ -476,6 +476,7 @@ async function runOptimisation() {
     );
 
     showResults(optResult, btResult, mcResult, alignedData.dates);
+    drawRebalancing(optResult, alignedData.latestPrices);
   };
 
   worker.onerror = (err) => {

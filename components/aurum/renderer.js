@@ -20,6 +20,8 @@ let _weightChart   = null;
 let _btChart       = null;
 let _mcChart       = null;
 let _mcResult      = null;
+let _rebalResult   = null;
+let _rebalPrices   = null;
 
 function pct(v, dp = 1) { return `${(v * 100).toFixed(dp)}%`; }
 function fmt(v, dp = 2) { return v.toFixed(dp); }
@@ -1090,6 +1092,122 @@ function drawPortfolioOverview(result, btResult) {
   card.style.display = 'block';
 }
 
+// ── Rebalancing Calculator ─────────────────────────────────────────────────
+
+const fmt$ = v => '$' + Math.round(v).toLocaleString('en-US');
+
+function updateRebalTable(portfolioValue) {
+  if (!_rebalResult) return;
+  const { tickers, optimal } = _rebalResult;
+  const prices = _rebalPrices;
+
+  const rows = tickers
+    .map((ticker, i) => ({
+      ticker,
+      weight: optimal.weights[i],
+      price:  prices ? (prices[i] ?? null) : null,
+    }))
+    .filter(r => r.weight > 0.001)
+    .sort((a, b) => b.weight - a.weight)
+    .map(r => {
+      const target  = r.weight * portfolioValue;
+      const shares  = (r.price && r.price > 0) ? Math.floor(target / r.price) : null;
+      const actual  = shares !== null ? shares * r.price : null;
+      return { ...r, target, shares, actual };
+    });
+
+  const tbody = document.getElementById('rebal-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td class="rebal-ticker">${r.ticker}</td>
+      <td class="rebal-num">${pct(r.weight)}</td>
+      <td class="rebal-num">${fmt$(r.target)}</td>
+      <td class="rebal-num rebal-price">${r.price ? '$' + r.price.toFixed(2) : '—'}</td>
+      <td class="rebal-num rebal-shares">${r.shares !== null ? r.shares.toLocaleString('en-US') : '—'}</td>
+      <td class="rebal-num rebal-actual">${r.actual !== null ? fmt$(r.actual) : '—'}</td>
+    </tr>`).join('');
+
+  const footer = document.getElementById('rebal-footer');
+  if (!footer) return;
+
+  const hasPrices = rows.some(r => r.price !== null);
+  if (hasPrices) {
+    const invested  = rows.reduce((s, r) => s + (r.actual ?? r.target), 0);
+    const remainder = portfolioValue - invested;
+    footer.innerHTML =
+      `<span class="rebal-foot-lbl">Invested</span> <span class="rebal-invested">${fmt$(invested)}</span>` +
+      `<span class="rebal-sep">·</span>` +
+      `<span class="rebal-foot-lbl">Uninvested</span> <span class="rebal-cash">${fmt$(remainder)} (${pct(remainder / portfolioValue)})</span>` +
+      `<span class="rebal-sep">·</span>` +
+      `<span class="rebal-note">Whole-share rounding · Last close prices</span>`;
+  } else {
+    footer.innerHTML = `<span class="rebal-note">Live prices unavailable — share counts not shown</span>`;
+  }
+}
+
+export function drawRebalancing(result, latestPrices) {
+  const card = document.getElementById('rebal-card');
+  if (!card) return;
+
+  _rebalResult = result;
+  _rebalPrices = latestPrices || null;
+
+  card.innerHTML = `
+    <div class="rebal-header">
+      <span class="rebal-title">Rebalancing Calculator</span>
+      <div class="rebal-controls">
+        <span class="rebal-ctrl-label">Portfolio Value</span>
+        <div class="rebal-input-wrap">
+          <span class="rebal-currency">$</span>
+          <input type="number" id="rebal-value" class="rebal-value-input"
+                 value="10000" min="100" max="100000000" step="500">
+        </div>
+        <div class="rebal-presets">
+          <button class="rebal-preset" data-v="5000">5K</button>
+          <button class="rebal-preset" data-v="10000">10K</button>
+          <button class="rebal-preset" data-v="25000">25K</button>
+          <button class="rebal-preset" data-v="50000">50K</button>
+          <button class="rebal-preset" data-v="100000">100K</button>
+        </div>
+      </div>
+    </div>
+    <div class="rebal-table-wrap">
+      <table class="rebal-table">
+        <thead>
+          <tr>
+            <th class="rebal-th-left">Asset</th>
+            <th class="rebal-th-right">Weight</th>
+            <th class="rebal-th-right">Target $</th>
+            <th class="rebal-th-right">Price</th>
+            <th class="rebal-th-right">Shares</th>
+            <th class="rebal-th-right">Invested $</th>
+          </tr>
+        </thead>
+        <tbody id="rebal-tbody"></tbody>
+      </table>
+    </div>
+    <div class="rebal-footer" id="rebal-footer"></div>`;
+
+  card.style.display = 'block';
+
+  const input = document.getElementById('rebal-value');
+  input.addEventListener('input', () => {
+    const v = parseFloat(input.value);
+    if (v >= 100) updateRebalTable(v);
+  });
+
+  card.querySelectorAll('.rebal-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      input.value = btn.dataset.v;
+      updateRebalTable(parseFloat(btn.dataset.v));
+    });
+  });
+
+  updateRebalTable(10000);
+}
+
 // ── Show/hide results ──────────────────────────────────────────────────────
 
 export function showResults(result, btResult, mcResult, dates) {
@@ -1123,6 +1241,9 @@ export function hideResults() {
 
   const mcCard = document.getElementById('mc-card');
   if (mcCard) mcCard.style.display = 'none';
+
+  const rebalCard = document.getElementById('rebal-card');
+  if (rebalCard) rebalCard.style.display = 'none';
 
   const btCard = document.getElementById('backtest-card');
   if (btCard) btCard.style.display = 'none';
