@@ -277,7 +277,7 @@ function normalCDF(x) {
  *   drift = muP − ½·sigP²
  * so the pth percentile at t is exp(drift·t + Z_p·sigP·√t).
  */
-export function runMonteCarlo(weights, mu, Sigma) {
+function runMonteCarlo(weights, mu, Sigma) {
   const portRet = dot(weights, mu);
   const portVar = Math.max(0, dot(weights, matVec(Sigma, weights)));
   const muP   = portRet / 252;
