@@ -260,6 +260,69 @@ function computeBacktest(weights, portLogRets, benchLogRets, dates, rf) {
   };
 }
 
+// ── Monte Carlo projection ─────────────────────────────────────────────────
+
+function normalCDF(x) {
+  const sign = x < 0 ? -1 : 1;
+  const t = 1 / (1 + 0.3275911 * Math.abs(x) * Math.SQRT2 / 2);
+  const poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+  return 0.5 * (1 + sign * (1 - poly * Math.exp(-x * x / 2)));
+}
+
+/**
+ * Analytical lognormal fan chart.
+ * Returns percentile bands (p5/p25/p50/p75/p95) and terminal stats for 1Y/3Y/5Y.
+ *
+ * Under Ito's lemma: ln(NAV_t) ~ N(drift·t, sigP²·t)
+ *   drift = muP − ½·sigP²
+ * so the pth percentile at t is exp(drift·t + Z_p·sigP·√t).
+ */
+export function runMonteCarlo(weights, mu, Sigma) {
+  const portRet = dot(weights, mu);
+  const portVar = Math.max(0, dot(weights, matVec(Sigma, weights)));
+  const muP   = portRet / 252;
+  const sigP  = Math.sqrt(portVar / 252);
+  const drift = muP - 0.5 * sigP * sigP;
+
+  const Z = [-1.6449, -0.6745, 0, 0.6745, 1.6449];
+
+  const HORIZONS = [
+    { label: '1Y', T: 252,  step: 4  },
+    { label: '3Y', T: 756,  step: 12 },
+    { label: '5Y', T: 1260, step: 20 },
+  ];
+
+  const results = {};
+  for (const { label, T, step } of HORIZONS) {
+    const ts = [];
+    for (let t = 0; t <= T; t += step) ts.push(t);
+    if (ts[ts.length - 1] !== T) ts.push(T);
+
+    // 5 percentile bands × time steps
+    const bands = [[], [], [], [], []];
+    for (const t of ts) {
+      const mu_t  = drift * t;
+      const sig_t = sigP * Math.sqrt(t);
+      for (let i = 0; i < 5; i++) {
+        bands[i].push(t === 0 ? 1 : Math.exp(mu_t + Z[i] * sig_t));
+      }
+    }
+
+    // Terminal stats (exact, closed-form)
+    const mu_T  = drift * T;
+    const sig_T = sigP * Math.sqrt(T);
+
+    const pLoss  = sig_T > 1e-9 ? normalCDF(-mu_T / sig_T) : (mu_T < 0 ? 1 : 0);
+    const median = Math.exp(mu_T);
+    // E[NAV_T] = exp(muP·T);  ES_5% = E[NAV_T]·Φ(−1.6449 − sig_T)/0.05
+    const lnMean = Math.exp(muP * T);
+    const es5    = sig_T > 1e-9 ? lnMean * normalCDF(-1.6449 - sig_T) / 0.05 : Math.exp(mu_T + Z[0] * sig_T);
+
+    results[label] = { T, ts, bands, pLoss, median, es5 };
+  }
+  return results;
+}
+
 // ── Black-Litterman ────────────────────────────────────────────────────────
 
 /**
@@ -569,5 +632,5 @@ export {
   marginalRiskContribution, maxDrawdown, portfolioVaR95,
   computeEquilibriumReturns, blackLittermanPosterior,
   solveMinVariance, solveMaxSharpe,
-  computeBacktest
+  computeBacktest, runMonteCarlo
 };

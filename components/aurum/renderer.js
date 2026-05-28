@@ -18,6 +18,8 @@ const BORDER     = '#1E1E1E';
 let _frontierChart = null;
 let _weightChart   = null;
 let _btChart       = null;
+let _mcChart       = null;
+let _mcResult      = null;
 
 function pct(v, dp = 1) { return `${(v * 100).toFixed(dp)}%`; }
 function fmt(v, dp = 2) { return v.toFixed(dp); }
@@ -866,6 +868,145 @@ export function drawBacktest(btResult, dates, modelReturn) {
   });
 }
 
+// ── Monte Carlo ────────────────────────────────────────────────────────────
+
+function fmtHorizonTick(t) {
+  if (t === 0) return 'Now';
+  const mo = Math.round(t / 252 * 12);
+  if (mo < 12) return `${mo}M`;
+  const yr = mo / 12;
+  return `${Number.isInteger(yr) ? yr : yr.toFixed(1)}Y`;
+}
+
+function renderMCHorizon(label) {
+  if (!_mcResult || !_mcResult[label]) return;
+  const { ts, bands, pLoss, median, es5 } = _mcResult[label];
+
+  const labels  = ts.map(fmtHorizonTick);
+  const toRet   = v => parseFloat(((v - 1) * 100).toFixed(2));
+  const ctx     = document.getElementById('mc-chart');
+  if (!ctx) return;
+
+  if (_mcChart) { _mcChart.destroy(); _mcChart = null; }
+
+  _mcChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        // Dataset order matters for fill targets
+        { data: bands[0].map(toRet), fill: false, borderColor: 'transparent', borderWidth: 0, pointRadius: 0, label: 'p5'  },  // 0 – p5 lower boundary
+        { data: bands[4].map(toRet), fill: { target: 0, above: 'rgba(245,197,24,0.07)' }, borderColor: 'transparent', borderWidth: 0, pointRadius: 0, label: 'p95' },  // 1 – p95→p5 outer band
+        { data: bands[1].map(toRet), fill: false, borderColor: 'transparent', borderWidth: 0, pointRadius: 0, label: 'p25' },  // 2 – p25 inner lower boundary
+        { data: bands[3].map(toRet), fill: { target: 2, above: 'rgba(245,197,24,0.18)' }, borderColor: 'transparent', borderWidth: 0, pointRadius: 0, label: 'p75' },  // 3 – p75→p25 inner band
+        { data: bands[2].map(toRet), fill: false, borderColor: GOLD, borderWidth: 2, pointRadius: 0, tension: 0.3, label: 'Median' },  // 4 – median
+        { data: ts.map(() => 0),     fill: false, borderColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderDash: [4, 4], pointRadius: 0, label: 'Break-even' },  // 5 – zero line
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          filter: item => item.datasetIndex === 4,
+          callbacks: {
+            title: items => items[0]?.label,
+            label: item => ` Median: ${item.parsed.y >= 0 ? '+' : ''}${item.parsed.y.toFixed(1)}%`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid:  { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#555', font: { family: 'JetBrains Mono', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
+          border: { color: BORDER },
+        },
+        y: {
+          grid:  { color: 'rgba(255,255,255,0.04)' },
+          ticks: {
+            color: '#555',
+            font: { family: 'JetBrains Mono', size: 10 },
+            callback: v => `${v >= 0 ? '+' : ''}${v.toFixed(0)}%`,
+          },
+          border: { color: BORDER },
+        },
+      },
+    },
+  });
+
+  // Stats
+  const plossEl  = document.getElementById('mc-ploss-val');
+  const medEl    = document.getElementById('mc-median-val');
+  const es5El    = document.getElementById('mc-es5-val');
+  const medPct   = (median - 1) * 100;
+  const es5Pct   = (es5 - 1) * 100;
+  const pLossPct = pLoss * 100;
+
+  if (plossEl) {
+    plossEl.textContent = `${pLossPct.toFixed(1)}%`;
+    plossEl.className   = `mc-stat-value ${pLoss < 0.20 ? 'mc-pos' : pLoss < 0.40 ? 'mc-warn' : 'mc-neg'}`;
+  }
+  if (medEl) {
+    medEl.textContent = `${medPct >= 0 ? '+' : ''}${medPct.toFixed(1)}%`;
+    medEl.className   = `mc-stat-value ${medPct >= 0 ? 'mc-pos' : 'mc-neg'}`;
+  }
+  if (es5El) {
+    es5El.textContent = `${es5Pct.toFixed(1)}%`;
+    es5El.className   = 'mc-stat-value mc-neg';
+  }
+
+  // Active tab
+  document.querySelectorAll('.mc-tab').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.horizon === label)
+  );
+}
+
+export function drawMonteCarlo(mcResult) {
+  const card = document.getElementById('mc-card');
+  if (!card) return;
+
+  _mcResult = mcResult;
+
+  card.innerHTML = `
+    <div class="mc-header">
+      <span class="mc-title">Monte Carlo Projection</span>
+      <div class="mc-tabs">
+        <button class="mc-tab active" data-horizon="1Y">1Y</button>
+        <button class="mc-tab"        data-horizon="3Y">3Y</button>
+        <button class="mc-tab"        data-horizon="5Y">5Y</button>
+      </div>
+    </div>
+    <div class="mc-chart-wrap"><canvas id="mc-chart"></canvas></div>
+    <div class="mc-stats">
+      <div class="mc-stat">
+        <span class="mc-stat-label">P(Loss)</span>
+        <span class="mc-stat-value" id="mc-ploss-val">—</span>
+        <span class="mc-stat-sub">probability of negative terminal return</span>
+      </div>
+      <div class="mc-stat">
+        <span class="mc-stat-label">Median Outcome</span>
+        <span class="mc-stat-value" id="mc-median-val">—</span>
+        <span class="mc-stat-sub">50th percentile cumulative return</span>
+      </div>
+      <div class="mc-stat">
+        <span class="mc-stat-label">CVaR 5%</span>
+        <span class="mc-stat-value" id="mc-es5-val">—</span>
+        <span class="mc-stat-sub">avg return in worst 5% of scenarios</span>
+      </div>
+    </div>
+    <div class="mc-note">Parametric log-normal projection using mean and covariance from the optimizer · Bands show 50% and 90% confidence intervals</div>`;
+
+  card.style.display = 'block';
+
+  card.querySelectorAll('.mc-tab').forEach(btn =>
+    btn.addEventListener('click', () => renderMCHorizon(btn.dataset.horizon))
+  );
+
+  renderMCHorizon('1Y');
+}
+
 // ── Portfolio Overview ─────────────────────────────────────────────────────
 
 function drawPortfolioOverview(result, btResult) {
@@ -951,7 +1092,7 @@ function drawPortfolioOverview(result, btResult) {
 
 // ── Show/hide results ──────────────────────────────────────────────────────
 
-export function showResults(result, btResult, dates) {
+export function showResults(result, btResult, mcResult, dates) {
   const emptyState     = document.getElementById('empty-state');
   const resultsContent = document.getElementById('results-content');
   if (emptyState)     emptyState.style.display = 'none';
@@ -960,6 +1101,7 @@ export function showResults(result, btResult, dates) {
   drawFrontier(result);
   drawMetrics(result);
   drawPortfolioOverview(result, btResult);
+  if (mcResult) drawMonteCarlo(mcResult);
   drawWeightChart(result);
   drawHeatmap(result);
   drawCorrelationInsights(result);
@@ -978,6 +1120,9 @@ export function hideResults() {
 
   const poCard = document.getElementById('po-card');
   if (poCard) poCard.style.display = 'none';
+
+  const mcCard = document.getElementById('mc-card');
+  if (mcCard) mcCard.style.display = 'none';
 
   const btCard = document.getElementById('backtest-card');
   if (btCard) btCard.style.display = 'none';
