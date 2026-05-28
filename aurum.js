@@ -365,6 +365,11 @@ function buildSectorGroups(tickers) {
   return groups;
 }
 
+// ── Module-level run state (shared between runOptimisation and runCompare) ──
+
+let alignedData      = null;
+let rf               = null;
+
 // ── Run optimisation ───────────────────────────────────────────────────────
 
 async function runOptimisation() {
@@ -375,7 +380,7 @@ async function runOptimisation() {
   setStatusLoading('Fetching price history…');
 
   const tickers = [...state.selectedTickers];
-  let alignedData, rf, mktWeights, benchmarkReturns;
+  let mktWeights, benchmarkReturns;
 
   try {
     const result = await fetchAlignedReturns(tickers, (done, total) => {
