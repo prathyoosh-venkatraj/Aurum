@@ -866,6 +866,89 @@ export function drawBacktest(btResult, dates, modelReturn) {
   });
 }
 
+// ── Portfolio Overview ─────────────────────────────────────────────────────
+
+function drawPortfolioOverview(result, btResult) {
+  const card = document.getElementById('po-card');
+  if (!card) return;
+
+  const { tickers, mode, optimal } = result;
+  const { return: ret, risk, sharpe, maxDrawdown: mdd, var95, assets } = optimal;
+
+  const modeLabel = mode === 'minVariance'    ? 'Minimum Variance'
+                  : mode === 'blackLitterman' ? 'Black-Litterman'
+                  : 'Maximum Sharpe';
+
+  const active = [...assets].filter(a => a.weight > 0.001).sort((a, b) => b.weight - a.weight);
+  const top3   = active.slice(0, 3);
+  const topPct = top3.reduce((s, a) => s + a.weight, 0);
+
+  const riskLabel = risk < 0.10 ? 'Low risk'
+                  : risk < 0.18 ? 'Moderate risk'
+                  : risk < 0.28 ? 'High risk'
+                  : 'Very high risk';
+  const dailySwing = (risk / Math.sqrt(252) * 100).toFixed(1);
+
+  const sharpeDesc = sharpe < 0.5  ? 'weak'
+                   : sharpe < 1.0  ? 'acceptable'
+                   : sharpe < 1.5  ? 'strong'
+                   : 'exceptional';
+
+  const materialCount = active.filter(a => a.weight >= 0.01).length;
+  const n = active.length;
+
+  const rows = [];
+
+  rows.push({
+    label: 'Top Holdings',
+    text: `${top3.map(a => `${a.ticker} ${pct(a.weight)}`).join(', ')} — top ${top3.length} account for ${pct(topPct)} of the portfolio`
+  });
+
+  rows.push({
+    label: 'Risk Profile',
+    text: `${riskLabel} — ${pct(risk)} annualised volatility (±${dailySwing}% per day); 1-day 95% VaR ${pct(var95)}; max drawdown ${pct(mdd)}`
+  });
+
+  rows.push({
+    label: 'Return Profile',
+    text: `${pct(ret)} expected annual return with ${sharpeDesc} risk-adjusted efficiency (Sharpe ${sharpe.toFixed(2)}); ${materialCount} of ${n} positions carry material weight`
+  });
+
+  if (btResult) {
+    const { portAnn, benchAnn, portMDD, winRate, benchAvailable } = btResult;
+    const vsStr = benchAvailable
+      ? ` vs SPY ${(benchAnn >= 0 ? '+' : '') + pct(benchAnn)}`
+      : '';
+    rows.push({
+      label: 'Realized (1Y)',
+      text: `Historical backtest: ${(portAnn >= 0 ? '+' : '') + pct(portAnn)} return${vsStr}, ${pct(portMDD)} max drawdown, ${(winRate * 100).toFixed(0)}% daily win rate`
+    });
+  }
+
+  if (mode === 'blackLitterman' && result.bl) {
+    const { equilibriumReturns, blReturns } = result.bl;
+    const avgShift = blReturns.reduce((s, r, i) => s + (r - equilibriumReturns[i]), 0) / blReturns.length;
+    const shiftStr = (avgShift >= 0 ? '+' : '') + pct(avgShift);
+    rows.push({
+      label: 'View Impact',
+      text: `Black-Litterman views shifted average expected return by ${shiftStr} across the portfolio relative to the CAPM market prior`
+    });
+  }
+
+  card.innerHTML = `
+    <div class="po-header">Portfolio Overview</div>
+    <div class="po-summary">${n}-asset ${modeLabel} · ${pct(ret)} expected return · ${pct(risk)} volatility · Sharpe ${sharpe.toFixed(2)}</div>
+    <div class="po-sections">
+      ${rows.map(r => `
+        <div class="po-row">
+          <span class="po-label">${r.label}</span>
+          <span class="po-text">${r.text}</span>
+        </div>`).join('')}
+    </div>`;
+
+  card.style.display = 'block';
+}
+
 // ── Show/hide results ──────────────────────────────────────────────────────
 
 export function showResults(result, btResult, dates) {
@@ -876,6 +959,7 @@ export function showResults(result, btResult, dates) {
 
   drawFrontier(result);
   drawMetrics(result);
+  drawPortfolioOverview(result, btResult);
   drawWeightChart(result);
   drawHeatmap(result);
   drawCorrelationInsights(result);
@@ -891,6 +975,9 @@ export function hideResults() {
 
   const blPanel = document.getElementById('bl-panel');
   if (blPanel) blPanel.style.display = 'none';
+
+  const poCard = document.getElementById('po-card');
+  if (poCard) poCard.style.display = 'none';
 
   const btCard = document.getElementById('backtest-card');
   if (btCard) btCard.style.display = 'none';

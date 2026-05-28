@@ -85,72 +85,6 @@ function setStatusError(msg)   { setStatus(msg, 'error'); }
 function setStatusOk(msg)      { setStatus(msg, 'success'); }
 function clearStatus()         { setStatus(''); }
 
-// ── AI Explain panel ───────────────────────────────────────────────────────
-
-let _explainText = null; // cached for current optimisation run; cleared on next run
-
-function resetExplainPanel(result) {
-  _explainText = null;
-  const btn  = document.getElementById('ai-explain-btn');
-  const body = document.getElementById('ai-explain-body');
-  if (!btn || !body) return;
-  body.textContent = '';
-  body.className   = 'ai-explain-body';
-  btn.disabled     = false;
-  btn.textContent  = 'Explain this portfolio';
-
-  btn.onclick = async () => {
-    // Return cached explanation without hitting the API again
-    if (_explainText) {
-      body.textContent = _explainText;
-      body.className   = 'ai-explain-body visible';
-      return;
-    }
-
-    btn.disabled    = true;
-    btn.textContent = 'Thinking…';
-    body.textContent = '';
-    body.className   = 'ai-explain-body';
-
-    const assets = result.optimal.assets.filter(a => a.weight > 0.001);
-    const payload = {
-      tickers: assets.map(a => a.ticker),
-      weights: assets.map(a => a.weight),
-      mode:    result.mode,
-      metrics: {
-        ret:    result.optimal.return,
-        risk:   result.optimal.risk,
-        sharpe: result.optimal.sharpe,
-        maxdd:  result.optimal.maxDrawdown
-      }
-    };
-
-    try {
-      const res = await fetch('/api/explain', {
-        method:      'POST',
-        credentials: 'same-origin',
-        headers:     { 'Content-Type': 'application/json' },
-        body:        JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (res.ok && data.explanation) {
-        _explainText     = data.explanation;
-        body.textContent = data.explanation;
-        body.className   = 'ai-explain-body visible';
-      } else {
-        body.textContent = data.error || 'Could not generate explanation.';
-        body.className   = 'ai-explain-body error';
-      }
-    } catch {
-      body.textContent = 'Connection error — please retry.';
-      body.className   = 'ai-explain-body error';
-    }
-
-    btn.disabled    = false;
-    btn.textContent = 'Explain this portfolio';
-  };
-}
-
 // ── Run button ─────────────────────────────────────────────────────────────
 
 function updateRunButton() {
@@ -536,7 +470,6 @@ async function runOptimisation() {
     );
 
     showResults(optResult, btResult, alignedData.dates);
-    resetExplainPanel(optResult);
   };
 
   worker.onerror = (err) => {

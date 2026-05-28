@@ -518,73 +518,58 @@ input { font-family: var(--font-mono); }
   color: var(--text-muted);
 }
 
-/* AI Explain card — terminal */
-.ai-explain-card {
-  background: #000;
-  border: 1px solid rgba(245, 197, 24, 0.55);
-  border-bottom: 1px solid rgba(245, 197, 24, 0.55);
+/* ── Portfolio Overview card ──────────────────────────────────────────────── */
+.po-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+}
+.po-header {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+.po-summary {
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--gold);
+  line-height: 1.55;
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.po-sections {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-  flex-wrap: nowrap;
-  box-shadow: 0 0 24px rgba(245, 197, 24, 0.06), inset 0 0 40px rgba(0,0,0,0.6);
+  gap: 13px;
 }
-.ai-explain-card::before {
-  content: '● ● ●   AURUM · PORTFOLIO ANALYSIS';
-  display: block;
-  background: #0a0a0a;
-  border-bottom: 1px solid rgba(245, 197, 24, 0.2);
-  color: var(--gold);
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.22em;
-  padding: 7px 14px;
-  user-select: none;
+.po-row {
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  gap: 18px;
+  align-items: baseline;
 }
-.ai-explain-btn {
-  flex-shrink: 0;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(245, 197, 24, 0.12);
-  color: var(--gold);
+.po-label {
   font-family: var(--font-mono);
-  font-size: 0.70rem;
-  letter-spacing: 0.08em;
+  font-size: 0.59rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
-  padding: 10px 14px;
-  cursor: pointer;
-  transition: background 0.15s;
+  color: #666;
   white-space: nowrap;
-  text-align: left;
-  width: 100%;
+  padding-top: 2px;
 }
-.ai-explain-btn::before {
-  content: '$ ';
-  color: rgba(245, 197, 24, 0.45);
-}
-.ai-explain-btn:hover:not(:disabled) {
-  background: rgba(245, 197, 24, 0.05);
-}
-.ai-explain-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.ai-explain-body {
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 400;
-  color: rgba(245, 197, 24, 0.88);
-  line-height: 1.85;
-  padding: 14px 14px 14px 28px;
-  min-width: 0;
-  display: none;
-  border-left: 2px solid rgba(245, 197, 24, 0.3);
-  margin: 10px 14px;
-}
-.ai-explain-body.visible { display: block; }
-.ai-explain-body.error {
-  display: block;
-  color: #FF6B6B;
-  font-size: 0.74rem;
-  border-left-color: rgba(255, 107, 107, 0.4);
+.po-text {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  color: #bbb;
+  line-height: 1.65;
 }
 
 /* Bottom panels */
