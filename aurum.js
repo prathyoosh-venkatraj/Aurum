@@ -481,8 +481,9 @@ async function runOptimisation() {
       optResult.Sigma
     );
 
-    showResults(optResult, btResult, mcResult, alignedData.dates, runCompare);
+    showResults(optResult, btResult, mcResult, alignedData.dates);
     drawRebalancing(optResult, alignedData.latestPrices);
+    setTimeout(() => runCompare(), 0);
   };
 
   worker.onerror = (err) => {
@@ -592,7 +593,6 @@ async function runCompare() {
   if (triggerBtn) { triggerBtn.disabled = false; triggerBtn.textContent = 'Compare All Modes →'; }
 }
 
-function initCompareButton() { /* wired via showResults callback */ }
 
 // ── Auto-run from model portfolio ──────────────────────────────────────────
 
@@ -633,6 +633,5 @@ async function autoRunFromPortfolio() {
   renderPortfolio();
   updateRunButton();
   updateCountLabel();
-  initCompareButton();
   await autoRunFromPortfolio();
 })();

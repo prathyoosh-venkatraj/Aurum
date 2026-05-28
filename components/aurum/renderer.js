@@ -1012,7 +1012,7 @@ export function drawMonteCarlo(mcResult) {
 
 // ── Portfolio Overview ─────────────────────────────────────────────────────
 
-function drawPortfolioOverview(result, btResult, onCompare) {
+function drawPortfolioOverview(result, btResult) {
   const card = document.getElementById('po-card');
   if (!card) return;
 
@@ -1094,10 +1094,7 @@ function drawPortfolioOverview(result, btResult, onCompare) {
   }
 
   card.innerHTML = `
-    <div class="po-header">
-      <span>Portfolio Overview</span>
-      <button class="compare-trigger-btn" id="compare-trigger-btn">Compare All Modes →</button>
-    </div>
+    <div class="po-header">Portfolio Overview</div>
     <div class="po-summary">${n}-asset ${modeLabel} · ${pct(ret)} expected return · ${pct(risk)} volatility · Sharpe ${sharpe.toFixed(2)}</div>
     <div class="po-sections">
       ${rows.map(r => `
@@ -1108,10 +1105,6 @@ function drawPortfolioOverview(result, btResult, onCompare) {
     </div>`;
 
   card.style.display = 'block';
-
-  if (onCompare) {
-    document.getElementById('compare-trigger-btn')?.addEventListener('click', onCompare);
-  }
 }
 
 // ── Rebalancing Calculator ─────────────────────────────────────────────────
@@ -1297,24 +1290,19 @@ export function drawComparePanel(modeResults, activeMode) {
   card.innerHTML = `
     <div class="compare-header">
       <span class="compare-title">Mode Comparison</span>
-      <button class="compare-close" id="compare-close-btn">✕</button>
     </div>
     <table class="compare-table">
       <thead><tr><th></th>${headerCells}</tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="compare-note">* Black-Litterman shown using CAPM market prior (no user views). Add views in BL mode to differentiate.</div>`;
+    <div class="compare-note">* Black-Litterman shown using CAPM market prior (no user views). Active mode column highlighted.</div>`;
 
   card.style.display = 'block';
-
-  document.getElementById('compare-close-btn')?.addEventListener('click', () => {
-    card.style.display = 'none';
-  });
 }
 
 // ── Show/hide results ──────────────────────────────────────────────────────
 
-export function showResults(result, btResult, mcResult, dates, onCompare) {
+export function showResults(result, btResult, mcResult, dates) {
   const emptyState     = document.getElementById('empty-state');
   const resultsContent = document.getElementById('results-content');
   if (emptyState)     emptyState.style.display = 'none';
@@ -1322,7 +1310,7 @@ export function showResults(result, btResult, mcResult, dates, onCompare) {
 
   drawFrontier(result);
   drawMetrics(result);
-  drawPortfolioOverview(result, btResult, onCompare);
+  drawPortfolioOverview(result, btResult);
   if (mcResult) drawMonteCarlo(mcResult);
   drawWeightChart(result);
   drawHeatmap(result);
