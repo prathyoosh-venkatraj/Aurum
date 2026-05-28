@@ -538,18 +538,18 @@ input { font-family: var(--font-mono); }
   margin-bottom: 12px;
 }
 .compare-trigger-btn {
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
   color: var(--gold);
   border: 1px solid var(--gold-border);
   border-radius: var(--radius);
-  padding: 3px 8px;
+  padding: 4px 12px;
   cursor: pointer;
   background: transparent;
-  letter-spacing: 0.06em;
   transition: background 0.15s;
-  text-transform: none;
-  font-weight: 400;
 }
 .compare-trigger-btn:hover { background: var(--gold-glow); }
 .compare-trigger-btn:disabled { opacity: 0.4; cursor: default; }

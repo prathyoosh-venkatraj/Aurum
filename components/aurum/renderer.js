@@ -1012,7 +1012,7 @@ export function drawMonteCarlo(mcResult) {
 
 // ── Portfolio Overview ─────────────────────────────────────────────────────
 
-function drawPortfolioOverview(result, btResult) {
+function drawPortfolioOverview(result, btResult, onCompare) {
   const card = document.getElementById('po-card');
   if (!card) return;
 
@@ -1109,9 +1109,9 @@ function drawPortfolioOverview(result, btResult) {
 
   card.style.display = 'block';
 
-  document.getElementById('compare-trigger-btn')?.addEventListener('click', () => {
-    document.dispatchEvent(new CustomEvent('aurum:compare-requested'));
-  });
+  if (onCompare) {
+    document.getElementById('compare-trigger-btn')?.addEventListener('click', onCompare);
+  }
 }
 
 // ── Rebalancing Calculator ─────────────────────────────────────────────────
@@ -1314,7 +1314,7 @@ export function drawComparePanel(modeResults, activeMode) {
 
 // ── Show/hide results ──────────────────────────────────────────────────────
 
-export function showResults(result, btResult, mcResult, dates) {
+export function showResults(result, btResult, mcResult, dates, onCompare) {
   const emptyState     = document.getElementById('empty-state');
   const resultsContent = document.getElementById('results-content');
   if (emptyState)     emptyState.style.display = 'none';
@@ -1322,7 +1322,7 @@ export function showResults(result, btResult, mcResult, dates) {
 
   drawFrontier(result);
   drawMetrics(result);
-  drawPortfolioOverview(result, btResult);
+  drawPortfolioOverview(result, btResult, onCompare);
   if (mcResult) drawMonteCarlo(mcResult);
   drawWeightChart(result);
   drawHeatmap(result);

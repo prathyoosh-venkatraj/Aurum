@@ -481,7 +481,7 @@ async function runOptimisation() {
       optResult.Sigma
     );
 
-    showResults(optResult, btResult, mcResult, alignedData.dates);
+    showResults(optResult, btResult, mcResult, alignedData.dates, runCompare);
     drawRebalancing(optResult, alignedData.latestPrices);
   };
 
@@ -592,9 +592,7 @@ async function runCompare() {
   if (triggerBtn) { triggerBtn.disabled = false; triggerBtn.textContent = 'Compare All Modes →'; }
 }
 
-function initCompareButton() {
-  document.addEventListener('aurum:compare-requested', () => runCompare());
-}
+function initCompareButton() { /* wired via showResults callback */ }
 
 // ── Auto-run from model portfolio ──────────────────────────────────────────
 
