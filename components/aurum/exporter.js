@@ -327,6 +327,10 @@ const REPORT_CSS = `
   .rpt-logo {
     font-size: 24px; font-weight: 900; letter-spacing: 6px; color: #1a1a1a;
   }
+  .rpt-sub {
+    font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: #B8860B; margin-top: 3px;
+  }
   .rpt-meta { font-size: 8.5px; color: #666; text-align: right; line-height: 1.8; }
   .rpt-meta strong { color: #1a1a1a; }
   /* Let sections flow and fill pages, but keep each one whole when it fits
@@ -514,7 +518,10 @@ export function generateReport({
 <body>
 
 <div class="rpt-header">
-  <div class="rpt-logo">AURUM</div>
+  <div>
+    <div class="rpt-logo">AURUM</div>
+    <div class="rpt-sub">by NovaSect · Portfolio Intelligence</div>
+  </div>
   <div class="rpt-meta">
     <strong>Portfolio Analysis Report</strong><br>
     ${date} · ${modeLabel} · ${tickers.length} assets<br>
