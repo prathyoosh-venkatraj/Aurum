@@ -20,8 +20,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid portfolio data' });
   }
 
-  if (!metrics || typeof metrics.ret !== 'number' ||
-      typeof metrics.risk !== 'number' || typeof metrics.sharpe !== 'number') {
+  if (!metrics ||
+      !Number.isFinite(metrics.ret) || !Number.isFinite(metrics.risk) ||
+      !Number.isFinite(metrics.sharpe) || !Number.isFinite(metrics.maxdd)) {
+    // maxdd is used in the prompt; validating it here prevents "NaN%" leaking
+    // into the LLM request when the client omits/garbles it.
     return res.status(400).json({ error: 'Invalid metrics' });
   }
 

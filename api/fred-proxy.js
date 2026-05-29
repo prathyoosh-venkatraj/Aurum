@@ -6,30 +6,11 @@
  * 24h edge cache — macro rates do not need sub-daily freshness for
  * portfolio construction purposes.
  *
- * Security: IP rate limiting (30 req/min) + series_id format validation.
+ * Security: IP rate limiting (30 req/min — distributed via Upstash when
+ * configured, else in-memory) + series_id format validation.
  */
 
-// In-process sliding-window rate limiter (persists across warm invocations).
-const rateLimitMap = new Map();
-
-function isRateLimited(ip) {
-    const WINDOW_MS = 60_000;
-    const MAX = 30;
-    const now = Date.now();
-    const entry = rateLimitMap.get(ip);
-    if (!entry || now - entry.windowStart > WINDOW_MS) {
-        rateLimitMap.set(ip, { count: 1, windowStart: now });
-        return false;
-    }
-    if (entry.count >= MAX) return true;
-    entry.count++;
-    return false;
-}
-
-function getClientIp(req) {
-    const xff = req.headers['x-forwarded-for'];
-    return xff ? xff.split(',')[0].trim() : (req.headers['x-real-ip'] || 'unknown');
-}
+import { isRateLimited, getClientIp } from './_ratelimit.js';
 
 // FRED series IDs: alphanumeric + underscores, max 20 chars (e.g. DGS10, VIXCLS).
 const SERIES_ID_RE = /^[A-Za-z0-9_]{1,20}$/;
@@ -46,7 +27,7 @@ export default async function handler(req, res) {
     }
 
     const ip = getClientIp(req);
-    if (isRateLimited(ip)) {
+    if (await isRateLimited(ip, 'fred', 30, 60)) {
         res.setHeader('Retry-After', '60');
         return res.status(429).json({ error: 'E429: RATE_LIMIT_EXCEEDED' });
     }
