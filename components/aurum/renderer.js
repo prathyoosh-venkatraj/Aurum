@@ -444,6 +444,62 @@ export function captureHeatmapLight(result) {
   try { return c.toDataURL('image/png'); } catch { return null; }
 }
 
+// Capture a Chart.js instance re-themed for print (dark axis text/grid on
+// white) without disturbing its on-screen dark version. Restyles options in
+// place, captures, then ALWAYS restores in a finally block.
+function captureChartLight(chart) {
+  if (!chart || !chart.canvas) return null;
+  const PRINT_TEXT = '#333333', PRINT_GRID = '#d8d8d8', PRINT_BORDER = '#bbbbbb';
+  const snap = [];
+  const set = (obj, key, val) => {
+    if (obj && obj[key] !== undefined) { snap.push([obj, key, obj[key]]); obj[key] = val; }
+  };
+  const o = chart.options || {};
+  if (o.scales) {
+    for (const k of Object.keys(o.scales)) {
+      const sc = o.scales[k];
+      if (!sc) continue;
+      if (sc.ticks)  set(sc.ticks, 'color', PRINT_TEXT);   // also fixes gold weight-axis ticks
+      if (sc.grid)   set(sc.grid, 'color', PRINT_GRID);
+      if (sc.title)  set(sc.title, 'color', PRINT_TEXT);
+      if (sc.border) set(sc.border, 'color', PRINT_BORDER);
+    }
+  }
+  if (o.plugins && o.plugins.legend && o.plugins.legend.labels) {
+    set(o.plugins.legend.labels, 'color', PRINT_TEXT);
+  }
+
+  let url = null;
+  try {
+    chart.update('none');
+    const src = chart.canvas;
+    const tmp = document.createElement('canvas');
+    tmp.width = src.width;
+    tmp.height = src.height;
+    const tctx = tmp.getContext('2d');
+    tctx.fillStyle = '#ffffff';
+    tctx.fillRect(0, 0, tmp.width, tmp.height);
+    tctx.drawImage(src, 0, 0);
+    url = tmp.toDataURL('image/png');
+  } catch {
+    url = null;
+  } finally {
+    for (const [obj, key, val] of snap) obj[key] = val;
+    try { chart.update('none'); } catch { /* ignore */ }
+  }
+  return url;
+}
+
+// Light-themed PNGs of all four Chart.js charts for the printed report.
+export function captureChartsLight() {
+  return {
+    frontier: captureChartLight(_frontierChart),
+    weight:   captureChartLight(_weightChart),
+    bt:       captureChartLight(_btChart),
+    mc:       captureChartLight(_mcChart),
+  };
+}
+
 export function drawHeatmap(result) {
   const container = document.getElementById('heatmap-wrap');
   const canvas    = document.getElementById('heatmap-canvas');

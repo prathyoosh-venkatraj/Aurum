@@ -5,7 +5,7 @@
  * No external dependencies — pure DOM + template strings.
  */
 
-import { captureHeatmapLight } from './renderer.js';
+import { captureHeatmapLight, captureChartsLight } from './renderer.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -310,99 +310,107 @@ function buildMonthlyHeatmap(btResult) {
 // ── CSS ────────────────────────────────────────────────────────────────────
 
 const REPORT_CSS = `
-  @page { size: A4; margin: 14mm 14mm 18mm 14mm; }
+  /* Refined gold-on-white — high-contrast institutional report.
+     Palette: text #1a1a1a, secondary #555 (min readable), fine-print #666;
+     gold accent #B8860B for rules/fills/headers (never as body text). */
+  @page { size: A4; margin: 14mm 13mm 16mm 13mm; }
   * {
     box-sizing: border-box; margin: 0; padding: 0;
-    /* Print fills/borders/highlights even when "Background graphics" is off. */
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
   body {
     font-family: 'Helvetica Neue', Arial, sans-serif;
-    font-size: 10px; color: #1a1a1a; background: white; line-height: 1.55;
+    font-size: 11px; color: #1a1a1a; background: #fff; line-height: 1.5;
   }
+
+  /* ── Header ───────────────────────────────────────────────────────── */
   .rpt-header {
     display: flex; align-items: flex-end; justify-content: space-between;
-    padding-bottom: 10px; border-bottom: 2px solid #1a1a1a; margin-bottom: 20px;
+    padding-bottom: 10px; margin-bottom: 22px;
+    border-bottom: 3px solid #B8860B;
   }
-  .rpt-logo {
-    font-size: 24px; font-weight: 900; letter-spacing: 6px; color: #1a1a1a;
-  }
-  .rpt-sub {
-    font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase;
-    color: #B8860B; margin-top: 3px;
-  }
-  .rpt-meta { font-size: 8.5px; color: #666; text-align: right; line-height: 1.8; }
-  .rpt-meta strong { color: #1a1a1a; }
-  /* Let sections flow and fill pages, but keep each one whole when it fits
-     (no more one-section-per-page waste). Sections taller than a page break
-     naturally; row/figure rules below stop mid-element splits. */
-  .section { break-inside: avoid; page-break-inside: avoid; margin-top: 22px; padding-top: 2px; }
+  .rpt-logo { font-size: 28px; font-weight: 900; letter-spacing: 6px; color: #111; }
+  .rpt-sub  { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: #8a6d00; margin-top: 4px; font-weight: 700; }
+  .rpt-meta { font-size: 9.5px; color: #444; text-align: right; line-height: 1.75; }
+  .rpt-meta strong { color: #111; font-size: 10.5px; }
+
+  /* ── Sections ─────────────────────────────────────────────────────── */
+  .section { break-inside: avoid; page-break-inside: avoid; margin-top: 24px; }
   .section-title {
-    font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em;
-    text-transform: uppercase; color: #7a5c00;
-    border-bottom: 1px solid #d4b800; padding-bottom: 5px; margin-bottom: 12px;
-    break-after: avoid; page-break-after: avoid;   /* never orphan a title */
+    font-size: 13px; font-weight: 800; letter-spacing: 0.06em;
+    text-transform: uppercase; color: #1a1a1a;
+    background: #faf4dd; border-left: 4px solid #B8860B;
+    padding: 7px 12px; margin-bottom: 14px;
+    break-after: avoid; page-break-after: avoid;
   }
-  /* Prevent table rows, metric boxes, and chart figures from splitting across pages. */
-  tr, .metric-box, .chart-grid > div, .bt-grid > div, .narrative {
+  tr, .metric-box, .chart-grid > div, .bt-grid > div, .narrative, .insights {
     break-inside: avoid; page-break-inside: avoid;
   }
-  thead { display: table-header-group; }   /* repeat headers on long tables */
-  table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+
+  /* ── Tables ───────────────────────────────────────────────────────── */
+  thead { display: table-header-group; }
+  table { width: 100%; border-collapse: collapse; font-size: 10px; }
   th {
-    background: #f5f5f0; font-weight: 700; font-size: 8.5px;
-    text-transform: uppercase; letter-spacing: 0.06em; color: #444;
-    padding: 5px 8px; text-align: left; border: 1px solid #ddd;
+    background: #faf4dd; font-weight: 800; font-size: 9px;
+    text-transform: uppercase; letter-spacing: 0.05em; color: #333;
+    padding: 6px 9px; text-align: left; border: 1px solid #ccc;
   }
-  td { padding: 5px 8px; border: 1px solid #e8e8e8; }
-  .num { text-align: right; font-family: 'Courier New', monospace; }
-  .row-lbl { color: #555; font-size: 9px; white-space: nowrap; }
-  .metrics-grid {
-    display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px;
-  }
+  td { padding: 6px 9px; border: 1px solid #d8d8d8; color: #222; }
+  tbody tr:nth-child(even) { background: #f8f8f4; }   /* zebra */
+  .num { text-align: right; font-family: 'Courier New', monospace; font-weight: 600; }
+  .row-lbl { color: #333; font-size: 10px; font-weight: 600; white-space: nowrap; }
+
+  /* ── KPI cards ────────────────────────────────────────────────────── */
+  .metrics-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; margin-bottom: 18px; }
   .metric-box {
-    border: 1px solid #ddd; border-radius: 3px; padding: 10px 10px 8px; text-align: center;
+    border: 1px solid #ccc; border-top: 3px solid #B8860B; border-radius: 2px;
+    padding: 12px 10px 10px; text-align: center; background: #fff;
   }
-  .metric-box .lbl { font-size: 7.5px; color: #999; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
-  .metric-box .val { font-size: 16px; font-weight: 700; color: #1a1a1a; }
-  .metric-box .sub { font-size: 7px; color: #bbb; margin-top: 2px; }
-  .narrative {
-    font-size: 9.5px; line-height: 1.75; color: #333; margin-bottom: 0;
-    padding: 10px 14px; background: #fafaf7; border-left: 3px solid #B8860B;
+  .metric-box .lbl { font-size: 9px; color: #555; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .metric-box .val { font-size: 23px; font-weight: 800; color: #111; line-height: 1.1; }
+  .metric-box .sub { font-size: 8px; color: #666; margin-top: 4px; }
+  .metric-box.neg .val { color: #b00020; }
+
+  /* ── Narrative / insights ─────────────────────────────────────────── */
+  .narrative, .insights {
+    font-size: 10px; line-height: 1.65; color: #2a2a2a;
+    padding: 12px 16px; background: #faf7ee; border-left: 3px solid #B8860B;
   }
-  .nar-row { margin-bottom: 5px; }
+  .insights { margin-top: 12px; }
+  .nar-row { margin-bottom: 6px; }
   .nar-row:last-child { margin-bottom: 0; }
   .nar-lbl {
-    font-weight: 700; color: #1a1a1a; text-transform: uppercase;
-    letter-spacing: 0.05em; font-size: 8.5px; margin-right: 6px;
+    font-weight: 800; color: #111; text-transform: uppercase;
+    letter-spacing: 0.04em; font-size: 9px; margin-right: 6px;
   }
-  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
-  .chart-lbl { font-size: 8.5px; color: #999; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 5px; }
-  .no-data { color: #ccc; font-size: 9px; padding: 8px 0; }
-  .note { font-size: 8px; color: #aaa; margin-top: 8px; font-style: italic; }
-  .rebal-footer {
-    margin-top: 8px; display: flex; gap: 24px; font-size: 9.5px;
-  }
-  .rebal-footer .cash { color: #888; }
-  .bt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .ci-head { margin-bottom: 7px; font-size: 10px; color: #444; }
+  .ci-stars { color: #B8860B; letter-spacing: 1px; font-size: 11px; }
+  .ci-avg { color: #666; }
+
+  /* ── Charts ───────────────────────────────────────────────────────── */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
+  .chart-lbl { font-size: 9.5px; color: #555; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .no-data { color: #999; font-size: 10px; padding: 8px 0; }
+  .bt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
   .mc-table { margin-top: 14px; }
-  .disclaimer {
-    font-size: 7.5px; color: #999; line-height: 1.6;
-    border-top: 1px solid #eee; padding-top: 10px;
+
+  /* ── Misc ─────────────────────────────────────────────────────────── */
+  .note { font-size: 8.5px; color: #666; margin-top: 8px; font-style: italic; }
+  .rebal-footer { margin-top: 10px; display: flex; gap: 24px; font-size: 11px; font-weight: 700; }
+  .rebal-footer .cash { color: #555; font-weight: 600; }
+  .disclaimer { font-size: 8px; color: #555; line-height: 1.6; border-top: 1px solid #ccc; padding-top: 10px; }
+  .disclaimer strong { color: #333; }
+  .rpt-footer {
+    margin-top: 24px; border-top: 2px solid #B8860B; padding-top: 8px;
+    display: flex; justify-content: space-between; font-size: 8.5px; color: #666;
   }
-  .disclaimer strong { color: #666; }
-  .insights {
-    font-size: 9px; line-height: 1.7; color: #333; margin-top: 12px;
-    padding: 10px 14px; background: #fafaf7; border-left: 3px solid #B8860B;
-  }
-  .ci-head { margin-bottom: 6px; font-size: 9px; color: #555; }
-  .ci-stars { color: #B8860B; letter-spacing: 1px; }
-  .ci-avg { color: #888; }
+
+  /* ── Monthly heatmap ──────────────────────────────────────────────── */
   .mh { margin-top: 6px; font-family: 'Courier New', monospace; }
-  .mh-row { display: grid; grid-template-columns: 36px repeat(12, 1fr); gap: 2px; margin-bottom: 2px; }
-  .mh-h  { font-size: 7px; color: #999; text-align: center; text-transform: uppercase; }
-  .mh-yr { font-size: 8px; color: #555; font-weight: 700; display: flex; align-items: center; }
-  .mh-c  { font-size: 7.5px; text-align: center; padding: 3px 0; border: 1px solid #eee; color: #1a1a1a; min-height: 16px; }
+  .mh-row { display: grid; grid-template-columns: 38px repeat(12, 1fr); gap: 2px; margin-bottom: 2px; }
+  .mh-h  { font-size: 8px; color: #555; font-weight: 700; text-align: center; text-transform: uppercase; }
+  .mh-yr { font-size: 9px; color: #333; font-weight: 800; display: flex; align-items: center; }
+  .mh-c  { font-size: 8px; font-weight: 600; text-align: center; padding: 4px 0; border: 1px solid #ddd; color: #1a1a1a; min-height: 17px; }
 `;
 
 // ── Main export function ───────────────────────────────────────────────────
@@ -417,15 +425,17 @@ export function generateReport({
   const { optimal, tickers } = optResult;
   const active = [...optimal.assets].filter(a => a.weight > 0.001).sort((a, b) => b.weight - a.weight);
 
-  // Capture chart images before anything else. Chart.js canvases are flattened
-  // onto white; the heatmap is re-rendered in a light/print theme (its on-screen
-  // version paints a black background that would be a black box on the page).
+  // Capture chart images before anything else. Chart.js charts are re-themed
+  // for print (dark axis text/grid on white) — falling back to a white-flattened
+  // capture if an instance is missing. The heatmap is re-rendered light (its
+  // on-screen version paints a black background that would be a black box).
+  const themed = captureChartsLight();
   const imgs = {
-    frontier: captureCanvasOnWhite('frontier-chart'),
-    weight:   captureCanvasOnWhite('weight-chart'),
+    frontier: themed.frontier || captureCanvasOnWhite('frontier-chart'),
+    weight:   themed.weight   || captureCanvasOnWhite('weight-chart'),
     heatmap:  captureHeatmapLight(optResult),
-    bt:       captureCanvasOnWhite('bt-nav-chart'),
-    mc:       captureCanvasOnWhite('mc-chart'),
+    bt:       themed.bt || captureCanvasOnWhite('bt-nav-chart'),
+    mc:       themed.mc || captureCanvasOnWhite('mc-chart'),
   };
 
   // ── Allocation table ────────────────────────────────────────────────────
@@ -536,8 +546,8 @@ export function generateReport({
     <div class="metric-box"><div class="lbl">Ann. Return</div><div class="val">${p(optimal.return)}</div><div class="sub">Expected</div></div>
     <div class="metric-box"><div class="lbl">Volatility</div><div class="val">${p(optimal.risk)}</div><div class="sub">Ann. Std Dev</div></div>
     <div class="metric-box"><div class="lbl">Sharpe Ratio</div><div class="val">${f(optimal.sharpe)}</div><div class="sub">vs 10Y UST</div></div>
-    <div class="metric-box"><div class="lbl">Max Drawdown</div><div class="val">-${p(optimal.maxDrawdown)}</div><div class="sub">Historical 1Y</div></div>
-    <div class="metric-box"><div class="lbl">VaR 95% (1d)</div><div class="val">-${p(optimal.var95, 2)}</div><div class="sub">Parametric</div></div>
+    <div class="metric-box neg"><div class="lbl">Max Drawdown</div><div class="val">-${p(optimal.maxDrawdown)}</div><div class="sub">Historical 1Y</div></div>
+    <div class="metric-box neg"><div class="lbl">VaR 95% (1d)</div><div class="val">-${p(optimal.var95, 2)}</div><div class="sub">Parametric</div></div>
   </div>
   <div class="narrative">${buildNarrative(optResult, btResult)}</div>
 </div>
@@ -590,6 +600,11 @@ ${rebalSection}
   <div class="disclaimer">
     <strong>DISCLAIMER —</strong> For informational and educational purposes only. Nothing on this platform constitutes financial, investment, tax, or legal advice, nor a solicitation or recommendation to buy or sell any security. Aurum is an instrument of NovaSect, which is not a registered investment adviser, broker-dealer, or financial planning firm under any applicable securities law or regulation. Portfolio optimisation outputs are mathematical models derived from historical price data. Expected returns, volatility estimates, and Sharpe ratios are statistical projections only and are not guarantees of future performance. Past performance does not guarantee future results. All investments involve risk, including the possible loss of principal. Price and market data is sourced from Yahoo Finance and other third-party providers. NovaSect does not guarantee the accuracy, completeness, or timeliness of any data displayed. NovaSect holds no positions in any securities displayed and receives no compensation from any covered entity. Always consult a qualified financial adviser before making investment decisions.
   </div>
+</div>
+
+<div class="rpt-footer">
+  <span>AURUM · NovaSect — Portfolio Intelligence</span>
+  <span>Generated ${date} · ${modeLabel} · Informational use only</span>
 </div>
 
 </body>
