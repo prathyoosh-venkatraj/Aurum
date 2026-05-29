@@ -12,50 +12,8 @@
  *   GITHUB_REBUILD_TOKEN — GitHub PAT with workflow dispatch scope
  */
 
-import { createHmac, timingSafeEqual } from 'crypto';
-
-const COOKIE_NAME = 'aurum_sess';
-
-function verifySession(cookieHeader, secret) {
-    if (!cookieHeader) return false;
-    const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
-    if (!match) return false;
-    const dotIdx = match[1].lastIndexOf('.');
-    if (dotIdx < 0) return false;
-    const encodedPayload = match[1].slice(0, dotIdx);
-    const sig = match[1].slice(dotIdx + 1);
-    try {
-        const expectedSig = createHmac('sha256', secret).update(encodedPayload).digest('hex');
-        const bufA = Buffer.from(sig, 'hex');
-        const bufB = Buffer.from(expectedSig, 'hex');
-        if (bufA.length !== bufB.length) return false;
-        return timingSafeEqual(bufA, bufB);
-    } catch {
-        return false;
-    }
-}
-
-// In-process sliding-window rate limiter (persists across warm invocations).
-const rateLimitMap = new Map();
-
-function isRateLimited(ip) {
-    const WINDOW_MS = 60_000;
-    const MAX = 3;
-    const now = Date.now();
-    const entry = rateLimitMap.get(ip);
-    if (!entry || now - entry.windowStart > WINDOW_MS) {
-        rateLimitMap.set(ip, { count: 1, windowStart: now });
-        return false;
-    }
-    if (entry.count >= MAX) return true;
-    entry.count++;
-    return false;
-}
-
-function getClientIp(req) {
-    const xff = req.headers['x-forwarded-for'];
-    return xff ? xff.split(',')[0].trim() : (req.headers['x-real-ip'] || 'unknown');
-}
+import { verifySession } from './_session.js';
+import { isRateLimited, getClientIp } from './_ratelimit.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -73,7 +31,7 @@ export default async function handler(req, res) {
 
     // Rate limit: 3 per minute per IP.
     const ip = getClientIp(req);
-    if (isRateLimited(ip)) {
+    if (await isRateLimited(ip, 'trigger-rebuild', 3, 60)) {
         res.setHeader('Retry-After', '60');
         return res.status(429).json({ error: 'E429: RATE_LIMIT_EXCEEDED' });
     }

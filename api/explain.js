@@ -1,49 +1,16 @@
-import { createHmac, timingSafeEqual } from 'crypto';
-
-const COOKIE_NAME  = 'aurum_sess';
-const RATE_MAP     = new Map();
-
-function getClientIp(req) {
-  const fwd = req.headers['x-forwarded-for'];
-  return (fwd ? fwd.split(',')[0] : req.socket?.remoteAddress) || 'unknown';
-}
-
-function isRateLimited(ip) {
-  const now = Date.now();
-  const window = 60_000;
-  const limit  = 10;
-  const rec = RATE_MAP.get(ip) || { count: 0, start: now };
-  if (now - rec.start > window) { rec.count = 0; rec.start = now; }
-  rec.count++;
-  RATE_MAP.set(ip, rec);
-  return rec.count > limit;
-}
-
-function verifySession(cookieHeader, secret) {
-  if (!cookieHeader || !secret) return false;
-  const match = cookieHeader.split(';').map(c => c.trim())
-    .find(c => c.startsWith(COOKIE_NAME + '='));
-  if (!match) return false;
-  const token = match.slice(COOKIE_NAME.length + 1);
-  const lastDot = token.lastIndexOf('.');
-  if (lastDot < 0) return false;
-  const payload = token.slice(0, lastDot);
-  const sig     = token.slice(lastDot + 1);
-  const expected = createHmac('sha256', secret).update(payload).digest('hex');
-  try {
-    return timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'));
-  } catch { return false; }
-}
+import { verifySession } from './_session.js';
+import { isRateLimited, getClientIp } from './_ratelimit.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  // Shared verifySession now enforces in-code expiry + SESSION_VERSION revocation.
   if (!verifySession(req.headers.cookie, process.env.SESSION_SECRET)) {
     return res.status(401).json({ error: 'Unauthorised' });
   }
 
   const ip = getClientIp(req);
-  if (isRateLimited(ip)) return res.status(429).json({ error: 'Too many requests' });
+  if (await isRateLimited(ip, 'explain', 10, 60)) return res.status(429).json({ error: 'Too many requests' });
 
   const { tickers, weights, metrics, mode } = req.body || {};
 

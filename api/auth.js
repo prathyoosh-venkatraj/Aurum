@@ -9,51 +9,22 @@
  *   AURUM_USER_ID   — login ID
  *   AURUM_PASSWORD  — password
  *   SESSION_SECRET  — random string (min 32 chars) used to sign tokens
+ *   SESSION_VERSION — optional; bump to revoke all existing sessions
+ *
+ * Phase 1 hardening:
+ *   - Session issue/verify centralised in _session.js (adds in-code expiry +
+ *     SESSION_VERSION revocation — previously tokens never expired in code).
+ *   - Login endpoint is now rate-limited per IP (was: only a 400ms delay).
+ *   - Auth attempts are audit-logged (IP + outcome, never the password).
  */
 
-import { createHmac, timingSafeEqual } from 'crypto';
-
-const COOKIE_NAME = 'aurum_sess';
-const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
-
-function signToken(payload, secret) {
-    return createHmac('sha256', secret).update(payload).digest('hex');
-}
-
-function issueSessionCookie(userId, secret) {
-    const payload = Buffer.from(`${userId}:${Date.now()}`).toString('base64url');
-    const sig = signToken(payload, secret);
-    return `${COOKIE_NAME}=${payload}.${sig}; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_MAX_AGE}; Path=/`;
-}
-
-function verifySession(cookieHeader, secret) {
-    if (!cookieHeader) return false;
-    const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
-    if (!match) return false;
-    const dotIdx = match[1].lastIndexOf('.');
-    if (dotIdx < 0) return false;
-    const encodedPayload = match[1].slice(0, dotIdx);
-    const sig = match[1].slice(dotIdx + 1);
-    try {
-        const expectedSig = signToken(encodedPayload, secret);
-        const bufA = Buffer.from(sig, 'hex');
-        const bufB = Buffer.from(expectedSig, 'hex');
-        if (bufA.length !== bufB.length) return false;
-        return timingSafeEqual(bufA, bufB);
-    } catch {
-        return false;
-    }
-}
-
-// Constant-time string comparison that handles differing lengths safely.
-function safeCompare(a, b) {
-    const len = Math.max(a.length, b.length, 1);
-    const bufA = Buffer.alloc(len);
-    const bufB = Buffer.alloc(len);
-    Buffer.from(a).copy(bufA);
-    Buffer.from(b).copy(bufB);
-    return timingSafeEqual(bufA, bufB) && a.length === b.length;
-}
+import {
+    issueSessionCookie,
+    verifySession,
+    clearCookie,
+    safeCompare,
+} from './_session.js';
+import { isRateLimited, getClientIp } from './_ratelimit.js';
 
 export default async function handler(req, res) {
     const sessionSecret = process.env.SESSION_SECRET;
@@ -69,7 +40,7 @@ export default async function handler(req, res) {
 
     // ── GET ?action=logout ─────────────────────────────────────────────────
     if (req.method === 'GET' && req.query.action === 'logout') {
-        res.setHeader('Set-Cookie', `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=Strict; Max-Age=0; Path=/`);
+        res.setHeader('Set-Cookie', clearCookie());
         res.setHeader('Location', '/login.html');
         return res.status(302).end();
     }
@@ -77,6 +48,16 @@ export default async function handler(req, res) {
     // ── POST — login ───────────────────────────────────────────────────────
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const ip = getClientIp(req);
+
+    // Rate-limit login attempts per IP (5/min) to blunt brute force. The old
+    // fixed 400ms delay is retained below for the per-attempt cost.
+    if (await isRateLimited(ip, 'login', 5, 60)) {
+        console.warn(`[auth] rate-limited login from ip=${ip}`);
+        res.setHeader('Retry-After', '60');
+        return res.status(429).json({ error: 'E429: Too many attempts — try again in a minute' });
     }
 
     const expectedUserId = process.env.AURUM_USER_ID;
@@ -101,14 +82,17 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'E400: Missing or invalid password' });
     }
 
-    const credentialsValid = safeCompare(userId, expectedUserId) && safeCompare(password, expectedPassword);
+    const credentialsValid =
+        safeCompare(userId, expectedUserId) && safeCompare(password, expectedPassword);
 
     if (!credentialsValid) {
+        console.warn(`[auth] failed login ip=${ip} ts=${new Date().toISOString()}`);
         // Fixed delay to blunt brute-force attempts.
         await new Promise(r => setTimeout(r, 400));
         return res.status(401).json({ error: 'E401: Invalid credentials' });
     }
 
+    console.info(`[auth] successful login ip=${ip} ts=${new Date().toISOString()}`);
     res.setHeader('Set-Cookie', issueSessionCookie(userId, sessionSecret));
     return res.status(200).json({ ok: true });
 }
