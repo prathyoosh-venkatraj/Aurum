@@ -326,6 +326,124 @@ function cellLabel(r) {
   return                 { tag: 'Natural hedge',        body: 'When one tends to fall, the other often rises. A strong counterbalancing pair.' };
 }
 
+// Heatmap colour themes. DARK reproduces the on-screen palette exactly;
+// LIGHT is used only for the exported/printed report (white page).
+const HM_THEME_DARK = {
+  bg: '#000', diagFill: '#181818', diagText: '#555',
+  cellStrong: '#000', cellWeak: '#777', axisText: TEXT_DIM,
+  legMid: '#141414', legStroke: '#2A2A2A', legNeg: '#6688CC', legPos: '#AA8800',
+};
+const HM_THEME_LIGHT = {
+  bg: '#ffffff', diagFill: '#ececec', diagText: '#888',
+  cellStrong: '#000', cellWeak: '#333', axisText: '#333',
+  legMid: '#e2e2e2', legStroke: '#bbbbbb', legNeg: '#3366aa', legPos: '#8a6d00',
+};
+
+// Shared painter — draws cells, axis labels, and legend into any 2D context.
+// Used by both the on-screen canvas (dark) and the export capture (light).
+function paintHeatmap(ctx, result, dims, theme) {
+  const { correlation, tickers } = result;
+  const { N, cellSize, labelSize, legendGap, legendH, totalW, totalH } = dims;
+
+  ctx.fillStyle = theme.bg;
+  ctx.fillRect(0, 0, totalW, totalH);
+
+  function corrToColour(r) {
+    if (r >= 0) return `rgb(${Math.round(245 * r)},${Math.round(197 * r)},${Math.round(24 * r + 20 * (1 - r))})`;
+    const t = -r;
+    return `rgb(0,0,${Math.round(80 + 175 * t)})`;
+  }
+
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const rho = correlation[i][j];
+      const x = labelSize + j * cellSize;
+      const y = labelSize + i * cellSize;
+      if (i === j) {
+        ctx.fillStyle = theme.diagFill;
+        ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+        if (cellSize >= 22) {
+          ctx.fillStyle = theme.diagText;
+          ctx.font = `600 ${Math.max(7, Math.floor(cellSize * 0.24))}px JetBrains Mono, monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(tickers[i].slice(0, 5), x + cellSize / 2, y + cellSize / 2);
+        }
+      } else {
+        ctx.fillStyle = corrToColour(rho);
+        ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+        if (cellSize >= 28) {
+          ctx.fillStyle = Math.abs(rho) > 0.5 ? theme.cellStrong : theme.cellWeak;
+          ctx.font = `${Math.max(8, Math.floor(cellSize * 0.28))}px JetBrains Mono, monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(rho.toFixed(2), x + cellSize / 2, y + cellSize / 2);
+        }
+      }
+    }
+  }
+
+  const axisFont = `${Math.max(8, Math.floor(cellSize * 0.3))}px JetBrains Mono, monospace`;
+  ctx.fillStyle = theme.axisText;
+  ctx.font = axisFont;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let j = 0; j < N; j++) {
+    ctx.save();
+    ctx.translate(labelSize + j * cellSize + cellSize / 2, labelSize - 6);
+    ctx.rotate(-Math.PI / 3);
+    ctx.fillText(tickers[j], 0, 0);
+    ctx.restore();
+  }
+  for (let i = 0; i < N; i++) {
+    ctx.fillText(tickers[i], labelSize - 6, labelSize + i * cellSize + cellSize / 2);
+  }
+
+  const legY = labelSize + N * cellSize + legendGap;
+  const legX = labelSize;
+  const legW = N * cellSize;
+  const grad = ctx.createLinearGradient(legX, 0, legX + legW, 0);
+  grad.addColorStop(0,   'rgb(0,0,255)');
+  grad.addColorStop(0.5, theme.legMid);
+  grad.addColorStop(1,   '#F5C518');
+  ctx.fillStyle = grad;
+  ctx.fillRect(legX, legY, legW, legendH);
+  ctx.strokeStyle = theme.legStroke;
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(legX, legY, legW, legendH);
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = theme.legNeg;
+  ctx.textAlign = 'left';
+  ctx.fillText('← Opposite', legX, legY + legendH + 4);
+  ctx.fillStyle = theme.legPos;
+  ctx.textAlign = 'right';
+  ctx.fillText('Together →', legX + legW, legY + legendH + 4);
+}
+
+function heatmapDims(N, maxWidth) {
+  const cellSize  = Math.max(18, Math.min(48, Math.floor((maxWidth - 60) / N)));
+  const labelSize = 52, legendGap = 18, legendH = 10, legendLblH = 20;
+  const totalW = labelSize + N * cellSize;
+  const totalH = labelSize + N * cellSize + legendGap + legendH + legendLblH;
+  return { N, cellSize, labelSize, legendGap, legendH, legendLblH, totalW, totalH };
+}
+
+// Render a light-themed heatmap to an offscreen canvas for the printed report.
+// Fixed width + 2x scale → crisp on the page, independent of devicePixelRatio.
+export function captureHeatmapLight(result) {
+  if (!result || !result.correlation || !result.tickers) return null;
+  const dims  = heatmapDims(result.tickers.length, 460);
+  const scale = 2;
+  const c = document.createElement('canvas');
+  c.width  = dims.totalW * scale;
+  c.height = dims.totalH * scale;
+  const ctx = c.getContext('2d');
+  ctx.scale(scale, scale);
+  paintHeatmap(ctx, result, dims, HM_THEME_LIGHT);
+  try { return c.toDataURL('image/png'); } catch { return null; }
+}
+
 export function drawHeatmap(result) {
   const container = document.getElementById('heatmap-wrap');
   const canvas    = document.getElementById('heatmap-canvas');
@@ -353,89 +471,7 @@ export function drawHeatmap(result) {
 
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, totalW, totalH);
-
-  function corrToColour(r) {
-    if (r >= 0) return `rgb(${Math.round(245 * r)},${Math.round(197 * r)},${Math.round(24 * r + 20 * (1 - r))})`;
-    const t = -r;
-    return `rgb(0,0,${Math.round(80 + 175 * t)})`;
-  }
-
-  // Draw cells
-  for (let i = 0; i < N; i++) {
-    for (let j = 0; j < N; j++) {
-      const rho = correlation[i][j];
-      const x   = labelSize + j * cellSize;
-      const y   = labelSize + i * cellSize;
-
-      if (i === j) {
-        // Diagonal: muted dark tile with ticker label (self-correlation is meaningless)
-        ctx.fillStyle = '#181818';
-        ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
-        if (cellSize >= 22) {
-          ctx.fillStyle = '#555';
-          ctx.font = `600 ${Math.max(7, Math.floor(cellSize * 0.24))}px JetBrains Mono, monospace`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(tickers[i].slice(0, 5), x + cellSize / 2, y + cellSize / 2);
-        }
-      } else {
-        ctx.fillStyle = corrToColour(rho);
-        ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
-        if (cellSize >= 28) {
-          ctx.fillStyle = Math.abs(rho) > 0.5 ? '#000' : '#777';
-          ctx.font = `${Math.max(8, Math.floor(cellSize * 0.28))}px JetBrains Mono, monospace`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(rho.toFixed(2), x + cellSize / 2, y + cellSize / 2);
-        }
-      }
-    }
-  }
-
-  // Axis labels
-  const axisFont = `${Math.max(8, Math.floor(cellSize * 0.3))}px JetBrains Mono, monospace`;
-  ctx.fillStyle = TEXT_DIM;
-  ctx.font = axisFont;
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'middle';
-  for (let j = 0; j < N; j++) {
-    ctx.save();
-    ctx.translate(labelSize + j * cellSize + cellSize / 2, labelSize - 6);
-    ctx.rotate(-Math.PI / 3);
-    ctx.fillText(tickers[j], 0, 0);
-    ctx.restore();
-  }
-  for (let i = 0; i < N; i++) {
-    ctx.fillText(tickers[i], labelSize - 6, labelSize + i * cellSize + cellSize / 2);
-  }
-
-  // ── Color legend bar ─────────────────────────────────────────────────────
-  const legY = labelSize + N * cellSize + legendGap;
-  const legX = labelSize;
-  const legW = N * cellSize;
-
-  const grad = ctx.createLinearGradient(legX, 0, legX + legW, 0);
-  grad.addColorStop(0,   'rgb(0,0,255)');
-  grad.addColorStop(0.5, '#141414');
-  grad.addColorStop(1,   '#F5C518');
-  ctx.fillStyle = grad;
-  ctx.fillRect(legX, legY, legW, legendH);
-  ctx.strokeStyle = '#2A2A2A';
-  ctx.lineWidth = 0.5;
-  ctx.strokeRect(legX, legY, legW, legendH);
-
-  ctx.font = '8px JetBrains Mono, monospace';
-  ctx.textBaseline = 'top';
-
-  ctx.fillStyle = '#6688CC';
-  ctx.textAlign = 'left';
-  ctx.fillText('← Opposite', legX, legY + legendH + 4);
-
-  ctx.fillStyle = '#AA8800';
-  ctx.textAlign = 'right';
-  ctx.fillText('Together →', legX + legW, legY + legendH + 4);
+  paintHeatmap(ctx, result, { N, cellSize, labelSize, legendGap, legendH, totalW, totalH }, HM_THEME_DARK);
 
   // ── Hover tooltip ────────────────────────────────────────────────────────
   if (canvas._hmMove)  canvas.removeEventListener('mousemove',  canvas._hmMove);

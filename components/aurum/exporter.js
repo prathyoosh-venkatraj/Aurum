@@ -5,12 +5,25 @@
  * No external dependencies — pure DOM + template strings.
  */
 
+import { captureHeatmapLight } from './renderer.js';
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function captureCanvas(id) {
+// Composite the source canvas onto an opaque white background before encoding.
+// Chart.js canvases are transparent; some PDF/print engines render transparency
+// as BLACK, so we flatten onto white to guarantee a print-safe image.
+function captureCanvasOnWhite(id) {
   try {
     const el = document.getElementById(id);
-    return el ? el.toDataURL('image/png') : null;
+    if (!el || !el.width || !el.height) return null;
+    const tmp = document.createElement('canvas');
+    tmp.width = el.width;
+    tmp.height = el.height;
+    const ctx = tmp.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, tmp.width, tmp.height);
+    ctx.drawImage(el, 0, 0);
+    return tmp.toDataURL('image/png');
   } catch { return null; }
 }
 
@@ -174,7 +187,11 @@ function buildCompareTable(compareResults, activeMode) {
 
 const REPORT_CSS = `
   @page { size: A4; margin: 14mm 14mm 18mm 14mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * {
+    box-sizing: border-box; margin: 0; padding: 0;
+    /* Print fills/borders/highlights even when "Background graphics" is off. */
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
   body {
     font-family: 'Helvetica Neue', Arial, sans-serif;
     font-size: 10px; color: #1a1a1a; background: white; line-height: 1.55;
@@ -245,18 +262,21 @@ export function generateReport({
   optResult, btResult, mcResult, compareResults, alignedData, rf, rebalValue
 }) {
   const date      = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const iso       = new Date().toISOString().slice(0, 10);
   const MODE_LBL  = { maxSharpe: 'Maximum Sharpe', minVariance: 'Minimum Variance', riskParity: 'Risk Parity', blackLitterman: 'Black-Litterman' };
   const modeLabel = MODE_LBL[optResult.mode] || optResult.mode;
   const { optimal, tickers } = optResult;
   const active = [...optimal.assets].filter(a => a.weight > 0.001).sort((a, b) => b.weight - a.weight);
 
-  // Capture chart images before anything else
+  // Capture chart images before anything else. Chart.js canvases are flattened
+  // onto white; the heatmap is re-rendered in a light/print theme (its on-screen
+  // version paints a black background that would be a black box on the page).
   const imgs = {
-    frontier: captureCanvas('frontier-chart'),
-    weight:   captureCanvas('weight-chart'),
-    heatmap:  captureCanvas('heatmap-canvas'),
-    bt:       captureCanvas('bt-nav-chart'),
-    mc:       captureCanvas('mc-chart'),
+    frontier: captureCanvasOnWhite('frontier-chart'),
+    weight:   captureCanvasOnWhite('weight-chart'),
+    heatmap:  captureHeatmapLight(optResult),
+    bt:       captureCanvasOnWhite('bt-nav-chart'),
+    mc:       captureCanvasOnWhite('mc-chart'),
   };
 
   // ── Allocation table ────────────────────────────────────────────────────
@@ -342,7 +362,7 @@ export function generateReport({
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AURUM — Portfolio Report · ${date}</title>
+<title>Aurum_Portfolio_Report_${iso}</title>
 <style>${REPORT_CSS}</style>
 </head>
 <body>
@@ -428,5 +448,31 @@ ${rebalSection}
   win.document.write(html);
   win.document.close();
   win.focus();
-  setTimeout(() => win.print(), 600);
+
+  // Gate print() on all embedded images having decoded, instead of a fixed
+  // 600ms timer that could fire before the base64 charts paint (→ blank PDF).
+  let printed = false;
+  const doPrint = () => {
+    if (printed) return;
+    printed = true;
+    try { win.focus(); win.print(); } catch { /* user closed tab */ }
+  };
+  const raf2 = () => {
+    const r = win.requestAnimationFrame || ((cb) => setTimeout(cb, 16));
+    r(() => r(doPrint));   // double-flush so layout + paint complete first
+  };
+
+  const imgEls = Array.from(win.document.images || []);
+  const pending = imgEls.filter(im => !im.complete);
+  if (pending.length === 0) {
+    raf2();
+  } else {
+    let remaining = pending.length;
+    const onSettled = () => { if (--remaining <= 0) raf2(); };
+    pending.forEach(im => {
+      im.addEventListener('load', onSettled);
+      im.addEventListener('error', onSettled);
+    });
+  }
+  setTimeout(doPrint, 5000); // hard fallback (guarded by `printed`)
 }
