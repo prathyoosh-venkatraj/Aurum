@@ -335,11 +335,24 @@ const HM_THEME_DARK = {
   bg: '#000', diagFill: '#181818', diagText: '#555',
   cellStrong: '#000', cellWeak: '#777', axisText: TEXT_DIM,
   legMid: '#141414', legStroke: '#2A2A2A', legNeg: '#6688CC', legPos: '#AA8800',
+  // On black: low correlation → near-black (blends with bg). Unchanged.
+  cellColour(r) {
+    if (r >= 0) return `rgb(${Math.round(245 * r)},${Math.round(197 * r)},${Math.round(24 * r + 20 * (1 - r))})`;
+    const t = -r;
+    return `rgb(0,0,${Math.round(80 + 175 * t)})`;
+  },
 };
 const HM_THEME_LIGHT = {
   bg: '#ffffff', diagFill: '#ececec', diagText: '#888',
-  cellStrong: '#000', cellWeak: '#333', axisText: '#333',
-  legMid: '#e2e2e2', legStroke: '#bbbbbb', legNeg: '#3366aa', legPos: '#8a6d00',
+  cellStrong: '#1a1a1a', cellWeak: '#444', axisText: '#333',
+  legMid: '#ffffff', legStroke: '#bbbbbb', legNeg: '#3366aa', legPos: '#8a6d00',
+  // On white: white → gold (positive) / white → blue (negative). Low
+  // correlation stays light instead of reading as a near-black grid.
+  cellColour(r) {
+    if (r >= 0) return `rgb(${Math.round(255 - 10 * r)},${Math.round(255 - 58 * r)},${Math.round(255 - 231 * r)})`;
+    const t = -r;
+    return `rgb(${Math.round(255 - 215 * t)},${Math.round(255 - 165 * t)},${Math.round(255 - 55 * t)})`;
+  },
 };
 
 // Shared painter — draws cells, axis labels, and legend into any 2D context.
@@ -350,12 +363,6 @@ function paintHeatmap(ctx, result, dims, theme) {
 
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, totalW, totalH);
-
-  function corrToColour(r) {
-    if (r >= 0) return `rgb(${Math.round(245 * r)},${Math.round(197 * r)},${Math.round(24 * r + 20 * (1 - r))})`;
-    const t = -r;
-    return `rgb(0,0,${Math.round(80 + 175 * t)})`;
-  }
 
   for (let i = 0; i < N; i++) {
     for (let j = 0; j < N; j++) {
@@ -373,7 +380,7 @@ function paintHeatmap(ctx, result, dims, theme) {
           ctx.fillText(tickers[i].slice(0, 5), x + cellSize / 2, y + cellSize / 2);
         }
       } else {
-        ctx.fillStyle = corrToColour(rho);
+        ctx.fillStyle = theme.cellColour(rho);
         ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
         if (cellSize >= 28) {
           ctx.fillStyle = Math.abs(rho) > 0.5 ? theme.cellStrong : theme.cellWeak;

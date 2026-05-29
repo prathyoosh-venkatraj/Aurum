@@ -335,17 +335,21 @@ const REPORT_CSS = `
   .rpt-meta strong { color: #111; font-size: 10.5px; }
 
   /* ── Sections ─────────────────────────────────────────────────────── */
-  .section { break-inside: avoid; page-break-inside: avoid; margin-top: 24px; }
+  /* Sections FLOW across page boundaries (no whole-section jumps that leave
+     big gaps); only atomic blocks below are kept from splitting. */
+  .section { margin-top: 20px; }
   .section-title {
     font-size: 13px; font-weight: 800; letter-spacing: 0.06em;
     text-transform: uppercase; color: #1a1a1a;
     background: #faf4dd; border-left: 4px solid #B8860B;
     padding: 7px 12px; margin-bottom: 14px;
-    break-after: avoid; page-break-after: avoid;
+    break-after: avoid; page-break-after: avoid;   /* keep title with its content */
   }
-  tr, .metric-box, .chart-grid > div, .bt-grid > div, .narrative, .insights {
+  tr, .metric-box, .chart-grid > div, .bt-grid > div,
+  .narrative, .insights, .heatmap-block, .mh {
     break-inside: avoid; page-break-inside: avoid;
   }
+  .heatmap-block { margin-top: 14px; }
 
   /* ── Tables ───────────────────────────────────────────────────────── */
   thead { display: table-header-group; }
@@ -577,7 +581,7 @@ export function generateReport({
       ${chartImg(imgs.weight, 'Weight Allocation')}
     </div>
   </div>
-  <div style="margin-top:14px;">
+  <div class="heatmap-block">
     <div class="chart-lbl">Asset Relationship Map (Correlation Heatmap)</div>
     ${chartImg(imgs.heatmap, 'Correlation Heatmap')}
   </div>
