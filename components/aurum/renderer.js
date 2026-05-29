@@ -19,6 +19,9 @@ let _frontierChart = null;
 let _weightChart   = null;
 let _btChart       = null;
 let _mcChart       = null;
+// Colour for the frontier's per-asset ticker labels (drawn by a custom plugin,
+// so it can't be restyled via chart.options). Darkened during export capture.
+let _assetLabelColor = '#999999';
 let _mcResult      = null;
 let _rebalResult   = null;
 let _rebalPrices   = null;
@@ -67,7 +70,7 @@ export function drawFrontier(result) {
       c.save();
       c.font = '8.5px "JetBrains Mono", monospace';
       c.textBaseline = 'middle';
-      c.fillStyle = '#999999';
+      c.fillStyle = _assetLabelColor;
       meta.data.forEach((pt, i) => {
         const lbl = assetData[i]?.label;
         if (lbl) c.fillText(lbl, pt.x + 8, pt.y - 4);
@@ -469,6 +472,9 @@ function captureChartLight(chart) {
     set(o.plugins.legend.labels, 'color', PRINT_TEXT);
   }
 
+  const savedLabelColor = _assetLabelColor;
+  _assetLabelColor = '#333333';   // frontier asset-label plugin reads this
+
   let url = null;
   try {
     chart.update('none');
@@ -485,6 +491,7 @@ function captureChartLight(chart) {
     url = null;
   } finally {
     for (const [obj, key, val] of snap) obj[key] = val;
+    _assetLabelColor = savedLabelColor;
     try { chart.update('none'); } catch { /* ignore */ }
   }
   return url;
