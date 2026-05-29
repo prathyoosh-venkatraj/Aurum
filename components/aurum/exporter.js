@@ -420,6 +420,12 @@ const REPORT_CSS = `
   .mh-h  { font-size: 8px; color: #555; font-weight: 700; text-align: center; text-transform: uppercase; }
   .mh-yr { font-size: 9px; color: #333; font-weight: 800; display: flex; align-items: center; }
   .mh-c  { font-size: 8px; font-weight: 600; text-align: center; padding: 4px 0; border: 1px solid #ddd; color: #1a1a1a; min-height: 17px; }
+
+  /* BISECTION (black-bar artifact): letter-spacing leaves thin vertical glyph
+     "ghost" edges in Chrome's print-to-PDF rasteriser, reading as black bars
+     on the spaced uppercase labels. Force normal tracking everywhere in the
+     report. (Visual hierarchy is preserved via size/weight/uppercase.) */
+  * { letter-spacing: normal !important; }
 `;
 
 // ── Main export function ───────────────────────────────────────────────────
