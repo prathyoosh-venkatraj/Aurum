@@ -481,9 +481,14 @@ function captureChartLight(chart) {
 
   const savedLabelColor = _assetLabelColor;
   _assetLabelColor = '#333333';   // frontier asset-label plugin reads this
+  const savedDPR = chart.options.devicePixelRatio;
 
   let url = null;
   try {
+    // Render at 3x backing resolution so the PNG is crisp when scaled to the
+    // full page width (charts are otherwise captured at small on-screen size).
+    chart.options.devicePixelRatio = 3;
+    chart.resize();
     chart.update('none');
     const src = chart.canvas;
     const tmp = document.createElement('canvas');
@@ -499,7 +504,8 @@ function captureChartLight(chart) {
   } finally {
     for (const [obj, key, val] of snap) obj[key] = val;
     _assetLabelColor = savedLabelColor;
-    try { chart.update('none'); } catch { /* ignore */ }
+    chart.options.devicePixelRatio = savedDPR;
+    try { chart.resize(); chart.update('none'); } catch { /* ignore */ }
   }
   return url;
 }

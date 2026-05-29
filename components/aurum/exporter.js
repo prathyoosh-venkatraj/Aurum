@@ -314,13 +314,18 @@ const REPORT_CSS = `
      Palette: text #1a1a1a, secondary #555 (min readable), fine-print #666;
      gold accent #B8860B for rules/fills/headers (never as body text). */
   @page { size: A4; margin: 14mm 13mm 16mm 13mm; }
-  * {
-    box-sizing: border-box; margin: 0; padding: 0;
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
-  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
     font-size: 11px; color: #1a1a1a; background: #fff; line-height: 1.5;
+  }
+  /* Force backgrounds/borders to print even with "Background graphics" off —
+     scoped to elements that actually have fills/borders. Applying this to the
+     universal * selector (every text run) triggered stray black bars over
+     glyphs in Chrome's print-to-PDF, so text elements are deliberately excluded. */
+  .rpt-header, .rpt-footer, .section-title, .metric-box, table, th, td,
+  tbody tr:nth-child(even), .narrative, .insights, .mh-c, .disclaimer {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
 
   /* ── Header ───────────────────────────────────────────────────────── */
