@@ -14,11 +14,18 @@ function captureCanvas(id) {
   } catch { return null; }
 }
 
-function p(v, dp = 1)  { return `${(v * 100).toFixed(dp)}%`; }
-function sp(v, dp = 1) { return `${v >= 0 ? '+' : ''}${(v * 100).toFixed(dp)}%`; }
-function f(v, dp = 2)  { return v.toFixed(dp); }
+// All formatters guard against NaN/Infinity/undefined so a degenerate metric
+// renders as an em-dash instead of "NaN%" or throwing and blanking the report.
+function p(v, dp = 1)  { return Number.isFinite(v) ? `${(v * 100).toFixed(dp)}%` : '—'; }
+function sp(v, dp = 1) { return Number.isFinite(v) ? `${v >= 0 ? '+' : ''}${(v * 100).toFixed(dp)}%` : '—'; }
+function f(v, dp = 2)  { return Number.isFinite(v) ? v.toFixed(dp) : '—'; }
+// Whole-dollar amounts (matches the on-screen Math.round convention for
+// portfolio value / invested / cash). Use money2() where cents matter (price).
 function $$(v) {
-  return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return Number.isFinite(v) ? '$' + Math.round(v).toLocaleString('en-US') : '—';
+}
+function money2(v) {
+  return Number.isFinite(v) ? '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
 }
 
 function chartImg(src, alt) {
@@ -79,11 +86,13 @@ function buildRebalTable(optResult, latestPrices, rebalValue) {
 
   const { tickers, optimal } = optResult;
   let totalInvested = 0;
+  let dropped = 0;
 
   const rows = tickers.map((ticker, i) => {
     const asset = optimal.assets[i];
+    if (!asset || asset.weight < 0.001) return '';
     const price = latestPrices[i];
-    if (!asset || asset.weight < 0.001 || !price || price <= 0) return '';
+    if (!price || price <= 0) { dropped++; return ''; }   // count, don't hide silently
     const target  = asset.weight * rebalValue;
     const shares  = Math.floor(target / price);
     const invested = shares * price;
@@ -92,13 +101,16 @@ function buildRebalTable(optResult, latestPrices, rebalValue) {
       <td style="font-weight:700">${ticker}</td>
       <td class="num">${p(asset.weight)}</td>
       <td class="num">${$$(target)}</td>
-      <td class="num">${$$(price)}</td>
+      <td class="num">${money2(price)}</td>
       <td class="num">${shares}</td>
       <td class="num">${$$(invested)}</td>
     </tr>`;
   }).filter(Boolean).join('');
 
   const cash = rebalValue - totalInvested;
+  const droppedNote = dropped > 0
+    ? ` ${dropped} position${dropped > 1 ? 's' : ''} omitted (no live price available), so invested total may be below 100% of target weight.`
+    : '';
   return `
     <table>
       <thead>
@@ -114,7 +126,7 @@ function buildRebalTable(optResult, latestPrices, rebalValue) {
       <strong>Total Invested: ${$$(totalInvested)}</strong>
       <span class="cash">Cash Remainder: ${$$(cash)}</span>
     </div>
-    <p class="note">Whole-share rounding (Math.floor). Prices are last available adjusted-close.</p>`;
+    <p class="note">Whole-share rounding (Math.floor). Prices are last available adjusted-close.${droppedNote}</p>`;
 }
 
 // ── Mode comparison table ──────────────────────────────────────────────────
@@ -147,7 +159,7 @@ function buildCompareTable(compareResults, activeMode) {
         ${cmpRow('Volatility',    r => p(r.optimal.risk))}
         ${cmpRow('Sharpe Ratio',  r => f(r.optimal.sharpe))}
         ${cmpRow('Max Drawdown',  r => `-${p(r.optimal.maxDrawdown)}`)}
-        ${cmpRow('VaR 95% (1d)', r => `-${p(r.optimal.var95)}`)}
+        ${cmpRow('VaR 95% (1d)', r => `-${p(r.optimal.var95, 2)}`)}
         ${cmpRow('Top Holdings',  r =>
           [...r.optimal.assets].filter(a => a.weight > 0.001)
             .sort((a, b) => b.weight - a.weight).slice(0, 3)
@@ -352,7 +364,7 @@ export function generateReport({
     <div class="metric-box"><div class="lbl">Volatility</div><div class="val">${p(optimal.risk)}</div><div class="sub">Ann. Std Dev</div></div>
     <div class="metric-box"><div class="lbl">Sharpe Ratio</div><div class="val">${f(optimal.sharpe)}</div><div class="sub">vs 10Y UST</div></div>
     <div class="metric-box"><div class="lbl">Max Drawdown</div><div class="val">-${p(optimal.maxDrawdown)}</div><div class="sub">Historical 1Y</div></div>
-    <div class="metric-box"><div class="lbl">VaR 95% (1d)</div><div class="val">-${p(optimal.var95)}</div><div class="sub">Parametric</div></div>
+    <div class="metric-box"><div class="lbl">VaR 95% (1d)</div><div class="val">-${p(optimal.var95, 2)}</div><div class="sub">Parametric</div></div>
   </div>
   <div class="narrative">${buildNarrative(optResult, btResult)}</div>
 </div>
