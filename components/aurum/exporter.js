@@ -183,6 +183,130 @@ function buildCompareTable(compareResults, activeMode) {
     <p class="note">* Black-Litterman uses CAPM market prior (no user views). Active mode highlighted.</p>`;
 }
 
+// ── Correlation insights (mirrors drawCorrelationInsights) ─────────────────
+
+function buildCorrelationInsights(result) {
+  const { correlation, tickers } = result;
+  const N = tickers?.length || 0;
+  if (!correlation || N < 2) return '';
+
+  const pairs = [];
+  for (let i = 0; i < N; i++)
+    for (let j = i + 1; j < N; j++)
+      pairs.push({ i, j, r: correlation[i][j] });
+
+  const avgCorr  = pairs.reduce((s, p) => s + p.r, 0) / pairs.length;
+  const highPair = pairs.reduce((a, b) => b.r > a.r ? b : a);
+  const lowPair  = pairs.reduce((a, b) => b.r < a.r ? b : a);
+
+  let score, scoreLabel;
+  if      (avgCorr < 0.15) { score = 5; scoreLabel = 'Excellent'; }
+  else if (avgCorr < 0.30) { score = 4; scoreLabel = 'Good'; }
+  else if (avgCorr < 0.50) { score = 3; scoreLabel = 'Moderate'; }
+  else if (avgCorr < 0.70) { score = 2; scoreLabel = 'Low'; }
+  else                     { score = 1; scoreLabel = 'Poor'; }
+  const stars = '●'.repeat(score) + '○'.repeat(5 - score);
+
+  const overallText =
+      avgCorr < 0.15 ? `Assets move largely independently — strong diversification. When one position falls, others are unlikely to follow, cushioning the portfolio during stress.`
+    : avgCorr < 0.30 ? `Good diversification. The assets share a modest positive relationship but don't move in lockstep, capturing most of the protective effect of holding multiple positions.`
+    : avgCorr < 0.50 ? `Moderate diversification. Assets move in the same direction roughly half the time; a broad market shock would likely affect most holdings at once.`
+    : avgCorr < 0.70 ? `The assets tend to rise and fall together. Adding positions from different sectors or geographies could materially improve resilience.`
+    :                  `The assets move very closely together, offering limited diversification benefit. Consider holdings from different industries, regions, or asset classes.`;
+
+  const hiA = tickers[highPair.i], hiB = tickers[highPair.j], hiR = highPair.r;
+  const strongText =
+      hiR > 0.8 ? `${hiA} and ${hiB} (${hiR.toFixed(2)}) are extremely tightly linked — holding both adds almost no diversification benefit over holding either alone.`
+    : hiR > 0.6 ? `${hiA} and ${hiB} (${hiR.toFixed(2)}) move together most of the time; a shock to their shared industry would likely hit both at once.`
+    :             `${hiA} and ${hiB} (${hiR.toFixed(2)}) are the most correlated pair here, but the relationship remains manageable.`;
+
+  const loA = tickers[lowPair.i], loB = tickers[lowPair.j], loR = lowPair.r;
+  const diversifierText =
+      loR < 0   ? `${loA} and ${loB} (${loR.toFixed(2)}) tend to move in opposite directions — a natural hedge that actively dampens overall volatility.`
+    : loR < 0.2 ? `${loA} and ${loB} (${loR.toFixed(2)}) are nearly uncorrelated, the strongest diversification pair here.`
+    :             `${loA} and ${loB} (${loR.toFixed(2)}) have the weakest relationship in the portfolio, providing the most diversification benefit among current holdings.`;
+
+  return `
+    <div class="insights">
+      <div class="ci-head">
+        <span class="nar-lbl">Diversification</span>
+        <span class="ci-stars">${stars}</span> ${scoreLabel}
+        <span class="ci-avg">· Avg pairwise correlation ${avgCorr.toFixed(2)}</span>
+      </div>
+      <div class="nar-row"><span class="nar-lbl">Overview</span> ${overallText}</div>
+      <div class="nar-row"><span class="nar-lbl">Strongest Link</span> ${strongText}</div>
+      <div class="nar-row"><span class="nar-lbl">Best Diversifier</span> ${diversifierText}</div>
+    </div>`;
+}
+
+// ── Black-Litterman decomposition table (mirrors drawBLPanel) ──────────────
+
+function buildBLSection(optResult) {
+  if (optResult.mode !== 'blackLitterman' || !optResult.bl) return '';
+  const { tickers, bl, optimal } = optResult;
+  const { equilibriumReturns, blReturns } = bl;
+
+  const rows = tickers
+    .map((t, i) => ({ ticker: t, eq: equilibriumReturns[i], bl: blReturns[i], weight: optimal.assets[i]?.weight ?? 0 }))
+    .sort((a, b) => b.bl - a.bl)
+    .map(r => `<tr>
+        <td style="font-weight:700">${r.ticker}</td>
+        <td class="num">${p(r.eq)}</td>
+        <td class="num">${p(r.bl)}</td>
+        <td class="num">${sp(r.bl - r.eq)}</td>
+        <td class="num">${p(r.weight)}</td>
+      </tr>`).join('');
+
+  return `
+  <div class="section">
+    <div class="section-title">Black-Litterman Decomposition</div>
+    <table>
+      <thead><tr>
+        <th>Asset</th><th style="text-align:right">Mkt. Prior</th>
+        <th style="text-align:right">BL Return</th><th style="text-align:right">View Shift</th>
+        <th style="text-align:right">Allocation</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p class="note">How your views shift expected returns relative to the CAPM market prior.</p>
+  </div>`;
+}
+
+// ── Monthly-returns heatmap (mirrors drawBacktest's grid) ──────────────────
+
+function monthColourLight(ret) {
+  const mag = Math.min(1, Math.abs(ret) / 0.08); // ±8% saturates
+  const a = (0.12 + 0.55 * mag).toFixed(2);
+  return ret >= 0 ? `rgba(46,160,67,${a})` : `rgba(208,52,52,${a})`;
+}
+
+function buildMonthlyHeatmap(btResult) {
+  const m = btResult?.monthlyReturns;
+  if (!m || Object.keys(m).length === 0) return '';
+  const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const byYear = {};
+  for (const [k, ret] of Object.entries(m)) {
+    const [yr, mo] = k.split('-');
+    (byYear[yr] || (byYear[yr] = {}))[mo] = ret;
+  }
+  const years = Object.keys(byYear).sort();
+  const header = `<div class="mh-row"><div class="mh-yr"></div>${MO.map(x => `<div class="mh-h">${x}</div>`).join('')}</div>`;
+  const body = years.map(yr => {
+    const cells = MO.map((_, i) => {
+      const ret = byYear[yr][String(i + 1).padStart(2, '0')];
+      if (ret === undefined) return `<div class="mh-c"></div>`;
+      const txt = Math.abs(ret) >= 0.005 ? `${ret >= 0 ? '+' : ''}${(ret * 100).toFixed(1)}` : '';
+      return `<div class="mh-c" style="background:${monthColourLight(ret)}">${txt}</div>`;
+    }).join('');
+    return `<div class="mh-row"><div class="mh-yr">${yr}</div>${cells}</div>`;
+  }).join('');
+  return `
+    <div style="margin-top:14px;">
+      <div class="chart-lbl">Monthly Returns (%)</div>
+      <div class="mh">${header}${body}</div>
+    </div>`;
+}
+
 // ── CSS ────────────────────────────────────────────────────────────────────
 
 const REPORT_CSS = `
@@ -263,6 +387,18 @@ const REPORT_CSS = `
     border-top: 1px solid #eee; padding-top: 10px;
   }
   .disclaimer strong { color: #666; }
+  .insights {
+    font-size: 9px; line-height: 1.7; color: #333; margin-top: 12px;
+    padding: 10px 14px; background: #fafaf7; border-left: 3px solid #B8860B;
+  }
+  .ci-head { margin-bottom: 6px; font-size: 9px; color: #555; }
+  .ci-stars { color: #B8860B; letter-spacing: 1px; }
+  .ci-avg { color: #888; }
+  .mh { margin-top: 6px; font-family: 'Courier New', monospace; }
+  .mh-row { display: grid; grid-template-columns: 36px repeat(12, 1fr); gap: 2px; margin-bottom: 2px; }
+  .mh-h  { font-size: 7px; color: #999; text-align: center; text-transform: uppercase; }
+  .mh-yr { font-size: 8px; color: #555; font-weight: 700; display: flex; align-items: center; }
+  .mh-c  { font-size: 7.5px; text-align: center; padding: 3px 0; border: 1px solid #eee; color: #1a1a1a; min-height: 16px; }
 `;
 
 // ── Main export function ───────────────────────────────────────────────────
@@ -329,6 +465,7 @@ export function generateReport({
           <tbody>${btRows}</tbody>
         </table>
       </div>
+      ${buildMonthlyHeatmap(btResult)}
     </div>`;
   }
 
@@ -427,6 +564,7 @@ export function generateReport({
     <div class="chart-lbl">Asset Relationship Map (Correlation Heatmap)</div>
     ${chartImg(imgs.heatmap, 'Correlation Heatmap')}
   </div>
+  ${buildCorrelationInsights(optResult)}
 </div>
 
 <!-- Section 3: Mode Comparison -->
@@ -435,6 +573,7 @@ export function generateReport({
   ${buildCompareTable(compareResults, optResult.mode)}
 </div>
 
+${buildBLSection(optResult)}
 ${btSection}
 ${mcSection}
 ${rebalSection}
