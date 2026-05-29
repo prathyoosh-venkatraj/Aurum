@@ -205,12 +205,21 @@ const REPORT_CSS = `
   }
   .rpt-meta { font-size: 8.5px; color: #666; text-align: right; line-height: 1.8; }
   .rpt-meta strong { color: #1a1a1a; }
-  .section { page-break-before: always; padding-top: 2px; }
+  /* Let sections flow and fill pages, but keep each one whole when it fits
+     (no more one-section-per-page waste). Sections taller than a page break
+     naturally; row/figure rules below stop mid-element splits. */
+  .section { break-inside: avoid; page-break-inside: avoid; margin-top: 22px; padding-top: 2px; }
   .section-title {
     font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em;
     text-transform: uppercase; color: #7a5c00;
     border-bottom: 1px solid #d4b800; padding-bottom: 5px; margin-bottom: 12px;
+    break-after: avoid; page-break-after: avoid;   /* never orphan a title */
   }
+  /* Prevent table rows, metric boxes, and chart figures from splitting across pages. */
+  tr, .metric-box, .chart-grid > div, .bt-grid > div, .narrative {
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  thead { display: table-header-group; }   /* repeat headers on long tables */
   table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
   th {
     background: #f5f5f0; font-weight: 700; font-size: 8.5px;
