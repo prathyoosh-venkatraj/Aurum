@@ -1,6 +1,7 @@
 /**
  * Aurum — FRED Proxy
- * Vercel serverless function. Resolves CORS and secures FRED_API_KEY.
+ * Vercel serverless function. Same-origin proxy that secures FRED_API_KEY
+ * (no CORS headers are emitted — all callers are same-origin or server-side).
  * Used by the portfolio engine for the risk-free rate (DGS10) and
  * macro context (VIXCLS) needed for Sharpe ratio computation.
  * 24h edge cache — macro rates do not need sub-daily freshness for

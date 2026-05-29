@@ -2257,3 +2257,14 @@ input { font-family: var(--font-mono); }
   .legal-footer-inner { flex-direction: column; gap: 10px; }
   .legal-label { min-width: unset; }
 }
+
+/* Phase 5 (a11y): honour reduced-motion — disable shimmer, transitions, and
+   CSS-driven animation for users who request it. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -25,3 +25,5 @@ jobs:
         run: node scripts/test-engine.mjs
       - name: Share-allocation tests (fixture-based, offline)
         run: node scripts/test-allocation.mjs
+      - name: HTML-escape regression test (XSS helper)
+        run: node scripts/test-escape.mjs
