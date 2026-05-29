@@ -6,6 +6,8 @@
  * allocation, holdings table, stats bar, and region bar.
  */
 
+import { escapeHtml } from './components/aurum/escape.js';
+
 const PROXY          = '/api/yahoo-proxy';
 const DATA_PATH      = './data/sample-portfolios.json';
 const PRICE_CACHE_NS = 'aurum_portfolio_prices_v2';
@@ -165,16 +167,16 @@ function renderCard(id, p) {
   const sharpe    = p.stats?.sharpe != null ? p.stats.sharpe.toFixed(2) : '—';
   const volPct    = p.stats?.volatility != null ? `${(p.stats.volatility * 100).toFixed(1)}%` : '—';
   const minTier   = p.min_recommended_tier ? `From $${(p.min_recommended_tier / 1000).toFixed(0)}K` : '';
-  const tags      = (p.tags || []).map(t => `<span class="pc-tag">${t}</span>`).join('');
+  const tags      = (p.tags || []).map(t => `<span class="pc-tag">${escapeHtml(t)}</span>`).join('');
 
   return `
-    <div class="portfolio-card" data-id="${id}">
+    <div class="portfolio-card" data-id="${escapeHtml(id)}">
       <div class="pc-header">
         <div class="pc-title-block">
-          <div class="pc-name">${p.name}</div>
-          <div class="pc-tagline">${p.tagline}</div>
+          <div class="pc-name">${escapeHtml(p.name)}</div>
+          <div class="pc-tagline">${escapeHtml(p.tagline)}</div>
         </div>
-        <span class="risk-badge risk-${p.risk_level}">${riskLabel}</span>
+        <span class="risk-badge risk-${escapeHtml(p.risk_level)}">${escapeHtml(riskLabel)}</span>
       </div>
       <div class="pc-stats">
         <div class="pc-stat">
@@ -432,10 +434,10 @@ function renderHoldings(portfolio, tier) {
 
   const rows = active.map(h => `
     <tr>
-      <td class="td-ticker">${h.ticker}</td>
-      <td class="td-name">${h.name}</td>
-      <td><span class="sector-chip">${shortenSector(h.sector)}</span></td>
-      <td><span class="region-pill">${h.region}</span></td>
+      <td class="td-ticker">${escapeHtml(h.ticker)}</td>
+      <td class="td-name">${escapeHtml(h.name)}</td>
+      <td><span class="sector-chip">${escapeHtml(shortenSector(h.sector))}</span></td>
+      <td><span class="region-pill">${escapeHtml(h.region)}</span></td>
       <td class="td-right td-weight">${(h.weight * 100).toFixed(1)}%</td>
       <td class="td-right td-shares">${h.shares}</td>
       <td class="td-right td-price">${fmtPrice(h.price)}</td>

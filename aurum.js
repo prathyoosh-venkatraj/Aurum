@@ -16,6 +16,7 @@ import { fetchAlignedReturns, fetchRiskFreeRate, fetchMarketCaps, fetchBenchmark
 import { showResults, hideResults, drawRebalancing, drawComparePanel } from './components/aurum/renderer.js';
 import { computeBacktest, runMonteCarlo, optimise } from './components/aurum/engine.js';
 import { generateReport } from './components/aurum/exporter.js';
+import { escapeHtml } from './components/aurum/escape.js';
 
 // ── Load universe ──────────────────────────────────────────────────────────
 
@@ -128,12 +129,12 @@ function buildSearchResult(entry) {
   div.dataset.ticker = entry.ticker;
   div.innerHTML    = `
     <div class="result-left">
-      <span class="result-ticker">${entry.ticker}</span>
-      <span class="result-name">${entry.name}</span>
+      <span class="result-ticker">${escapeHtml(entry.ticker)}</span>
+      <span class="result-name">${escapeHtml(entry.name)}</span>
     </div>
     <div class="result-right">
-      <span class="result-sector">${sectorShort(entry.gicsSector)}</span>
-      <span class="result-cap ${entry.marketCapTier}">${entry.marketCapTier}</span>
+      <span class="result-sector">${escapeHtml(sectorShort(entry.gicsSector))}</span>
+      <span class="result-cap ${escapeHtml(entry.marketCapTier)}">${escapeHtml(entry.marketCapTier)}</span>
     </div>`;
 
   if (!isSelected && !isFull) {
