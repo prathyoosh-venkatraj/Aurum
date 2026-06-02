@@ -1,0 +1,14 @@
+# Files excluded from the Vercel deployment so they are NOT served publicly.
+# The live app loads aurum.js / portfolios.js / components/ / style.css and
+# fetches data/*.json at runtime — those are kept. Only offline/CI files below
+# are excluded. (package.json is needed by Vercel at build time and already
+# 404s for static requests, so it is intentionally not listed.)
+
+# Offline build + CI pipeline (portfolio optimizer build, tests, verifiers) —
+# never used by the live app.
+scripts/
+.github/
+
+# Internal docs.
+*.md
+*.docx
