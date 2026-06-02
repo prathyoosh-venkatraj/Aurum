@@ -349,7 +349,9 @@ function initViewsPanel() {
 
 let _worker = null;
 function getWorker() {
-  if (!_worker) _worker = new Worker('./components/aurum/worker.js', { type: 'module' });
+  // Bundled worker output (see scripts/build-web.mjs). Resolved relative to the
+  // document (root), so the path matches the deployed components/aurum/ folder.
+  if (!_worker) _worker = new Worker('./components/aurum/worker.min.js', { type: 'module' });
   return _worker;
 }
 

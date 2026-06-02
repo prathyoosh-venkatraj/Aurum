@@ -6,8 +6,12 @@
     "node": ">=20.x"
   },
   "scripts": {
-    "verify-tickers":    "node scripts/verify-tickers.mjs",
-    "build-portfolios":  "node scripts/build-portfolios.mjs",
-    "test":              "node scripts/test-engine.mjs && node scripts/test-allocation.mjs && node scripts/test-escape.mjs"
+    "verify-tickers": "node scripts/verify-tickers.mjs",
+    "build-portfolios": "node scripts/build-portfolios.mjs",
+    "build-web": "node scripts/build-web.mjs",
+    "test": "node scripts/test-engine.mjs && node scripts/test-allocation.mjs && node scripts/test-escape.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
   }
 }
