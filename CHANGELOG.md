@@ -49,6 +49,15 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
 - `scripts/test-cvar.mjs` — 8 assertions (CVaR sign/monotonicity, validity/constraints, determinism,
   and that min-CVaR achieves a shallower tail than min-variance). 95 engine assertions total.
 
+### Added — Group 2c · Maximum Diversification
+- **Max-Diversification optimizer** (`engine.solveMaxDiversification`, mode `maxDiversification`) —
+  maximises the diversification ratio (σᵀw)/√(wᵀΣw) by projected gradient ascent (Choueifaty &
+  Coignard, 2008). New "Max Diversification" optimisation-mode radio. See **ADR-0007**.
+- **Diversification-ratio metric** (`engine.diversificationRatio`) now on every result
+  (`optimal.divRatio`).
+- `scripts/test-maxdiv.mjs` — 9 assertions (validity/constraints, DR ≥ 1, MDP ≥ equal-weight DR,
+  determinism, wiring). **Group 2 complete; 104 engine assertions total.**
+
 ## Historical (auto-generated from git log)
 
 ### 2026-06-05

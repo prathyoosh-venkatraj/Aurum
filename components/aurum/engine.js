@@ -883,6 +883,40 @@ function solveMinCVaR(returns, beta = 0.95, opts = {}) {
   return w;
 }
 
+// ── Maximum Diversification (Choueifaty & Coignard, 2008) ───────────────────
+
+/** Diversification ratio: weighted-average asset vol ÷ portfolio vol (≥ 1). */
+function diversificationRatio(weights, Sigma) {
+  const sigma = Sigma.map((row, i) => Math.sqrt(Math.max(0, row[i])));
+  const num = dot(sigma, weights);
+  const den = Math.sqrt(Math.max(1e-18, portfolioVariance(weights, Sigma)));
+  return num / den;
+}
+
+/**
+ * Maximum-Diversification portfolio — maximises the diversification ratio
+ * (σᵀw)/√(wᵀΣw) via projected gradient ascent. Captures the most correlation
+ * diversification benefit; gradient mirrors the max-Sharpe form with σ in place
+ * of (μ − r_f). Constraints enforced by projection each step.
+ */
+function solveMaxDiversification(Sigma, iters = 4000, tol = 1e-10, maxWeight = 1.0, sectorGroups = null, sectorCap = 1.0) {
+  const N = Sigma.length;
+  const sigma = Sigma.map((row, i) => Math.sqrt(Math.max(0, row[i])));
+  let w = projectConstrained(new Array(N).fill(1 / N), maxWeight, sectorGroups, sectorCap);
+  let best = diversificationRatio(w, Sigma), lr = 1.0;
+  for (let it = 0; it < iters; it++) {
+    const Sw = matVec(Sigma, w);
+    const den = Math.sqrt(Math.max(1e-18, dot(w, Sw)));      // portfolio vol
+    const dr = dot(sigma, w) / den;
+    const g = sigma.map((s, i) => (s - dr * Sw[i] / den) / den);   // ∂DR/∂w
+    const wNew = projectConstrained(w.map((x, i) => x + lr * g[i]), maxWeight, sectorGroups, sectorCap);
+    const drNew = diversificationRatio(wNew, Sigma);
+    if (drNew > best + tol) { w = wNew; best = drNew; lr *= 1.1; }
+    else { lr *= 0.5; if (lr < 1e-9) break; }
+  }
+  return w;
+}
+
 function covToCorr(Sigma) {
   const n = Sigma.length;
   const std = Sigma.map((row, i) => Math.sqrt(Math.max(0, row[i])));
@@ -950,18 +984,23 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const wMinCVaR = mode === 'minCVaR'
     ? solveMinCVaR(alignedReturns, 0.95, { maxWeight, sectorGroups, sectorCap })
     : null;
+  // Group 2c — Maximum Diversification.
+  const wMaxDiv = mode === 'maxDiversification'
+    ? solveMaxDiversification(Sigma, 4000, 1e-10, maxWeight, sectorGroups, sectorCap)
+    : null;
 
   // For BL mode the "optimal" is max-Sharpe on the posterior mu
-  let optimal = mode === 'minVariance'  ? wMinVar
-              : mode === 'riskParity'   ? wRiskParity
-              : mode === 'hrp'          ? wHRP
-              : mode === 'minCVaR'      ? wMinCVaR
+  let optimal = mode === 'minVariance'       ? wMinVar
+              : mode === 'riskParity'        ? wRiskParity
+              : mode === 'hrp'               ? wHRP
+              : mode === 'minCVaR'           ? wMinCVaR
+              : mode === 'maxDiversification' ? wMaxDiv
               : wMaxSharpe;
 
-  // Group 1b — Michaud resampled (robust) weights for the active objective.
-  // Skipped for Black-Litterman, HRP and Min-CVaR (already structurally robust).
+  // Group 1b — Michaud resampled (robust) weights. Only the quadratic single-shot
+  // objectives are resampled; clustered/tail/structured modes are already robust.
   let resampleMeta = null;
-  if (resample && mode !== 'blackLitterman' && mode !== 'hrp' && mode !== 'minCVaR') {
+  if (resample && ['minVariance', 'maxSharpe', 'riskParity'].includes(mode)) {
     const rw = resampleWeights(alignedReturns, mode, rf, { count: resampleCount, maxWeight, sectorGroups, sectorCap, covMethod });
     if (rw) { optimal = rw; resampleMeta = { enabled: true, count: resampleCount }; }
   }
@@ -974,6 +1013,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const mdd   = maxDrawdown(optimal, alignedReturns);
   const var95 = portfolioVaR95(ret, risk);
   const cvar95 = portfolioCVaR95(optimal, alignedReturns);   // empirical 1-day CVaR (tail)
+  const divRatio = diversificationRatio(optimal, Sigma);     // weighted-avg vol ÷ portfolio vol
 
   const assets = tickers.map((ticker, i) => ({
     ticker,
@@ -990,7 +1030,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
 
   return {
     tickers, mode, rf, mu, Sigma, correlation, frontier, covMeta, resample: resampleMeta,
-    optimal: { weights: optimal, return: ret, risk, sharpe: sr, maxDrawdown: mdd, var95, cvar95, assets },
+    optimal: { weights: optimal, return: ret, risk, sharpe: sr, maxDrawdown: mdd, var95, cvar95, divRatio, assets },
     anchors: {
       minVariance: { weights: wMinVar, return: mvRet, risk: mvRisk, sharpe: sharpeRatio(mvRet, mvRisk, rf) },
       maxSharpe:   { weights: wMaxSharpe, return: msRet, risk: msRisk, sharpe: sharpeRatio(msRet, msRisk, rf) }
@@ -1004,7 +1044,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
 export {
   buildMoments, regularise, covToCorr,
   ledoitWolfCovariance, ewmaCovariance, estimateMoments, resampleWeights, solveHRP,
-  solveMinCVaR, portfolioCVaR95,
+  solveMinCVaR, portfolioCVaR95, solveMaxDiversification, diversificationRatio,
   projectToSimplex, projectToSimplexBounded, enforceSectorCaps,
   portfolioReturn, portfolioVariance, portfolioRisk, sharpeRatio,
   marginalRiskContribution, maxDrawdown, portfolioVaR95,
