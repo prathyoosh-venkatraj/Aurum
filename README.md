@@ -29,8 +29,9 @@ a Monte-Carlo projection, a correlation map, and a printable PDF report.
 - **Efficient frontier + Capital Market Line**, parametric VaR, max drawdown, marginal risk
   contributions, **historical CVaR**, **diversification ratio**, and a **PCA factor risk
   decomposition** (systematic vs specific risk + per-factor portfolio exposures).
-- **Backtest vs SPY** (Sharpe, Calmar, tracking error, information ratio, monthly returns) and an
-  **analytical Monte-Carlo** projection (P(loss), CVaR).
+- **Backtest vs SPY** (Sharpe, Calmar, tracking error, information ratio, monthly returns), a
+  **walk-forward out-of-sample backtest** (rolling estimate → hold → rebalance — no look-ahead), and
+  an **analytical Monte-Carlo** projection (P(loss), CVaR).
 - **Correlation heatmap**, a plain-English (non-AI) portfolio description, **whole-share
   rebalancing** by investment tier, and **turnover-aware rebalancing** (cap turnover toward a target
   from current holdings; report the proportional trading-cost drag).

@@ -295,6 +295,69 @@ function computeBacktest(weights, portLogRets, benchLogRets, dates, rf) {
   };
 }
 
+/**
+ * Walk-forward OUT-OF-SAMPLE backtest. Re-optimises on a rolling lookback window
+ * and holds those weights over the following (unseen) period, rebalancing every
+ * `rebalEvery` days. Unlike computeBacktest (which tests weights on the same
+ * window they were fit on — look-ahead bias), every day's return here is earned
+ * by weights estimated *strictly from the past*. This is the honest test of a
+ * strategy. Reuses optimise(), so it works for every mode + estimator.
+ *
+ * @param {number[][]} returns  T×N daily log returns
+ * @param {string[]}   tickers
+ * @param {number}     rf
+ * @param {string}     mode
+ * @param {object}     opts  { lookback=126, rebalEvery=21, benchLogRets, dates, ...optimiseOpts }
+ */
+function walkForwardBacktest(returns, tickers, rf, mode, opts = {}) {
+  const { lookback = 126, rebalEvery = 21, benchLogRets = null, dates = null, ...optimiseOpts } = opts;
+  const T = returns.length, N = returns[0].length;
+  if (T < lookback + rebalEvery) return null;
+
+  let w = new Array(N).fill(1 / N);
+  const portDaily = [], benchDaily = [], oosDates = [];
+  let rebalances = 0;
+  for (let t = lookback; t < T; t++) {
+    if ((t - lookback) % rebalEvery === 0) {
+      const train = returns.slice(t - lookback, t);          // strictly past data
+      const res = optimise(train, tickers, rf, mode, { ...optimiseOpts, skipFrontier: true });
+      if (res?.optimal?.weights) w = res.optimal.weights;
+      rebalances++;
+    }
+    portDaily.push(returns[t].reduce((s, x, i) => s + x * w[i], 0));
+    if (benchLogRets) benchDaily.push(benchLogRets[t]);
+    if (dates) oosDates.push(dates[t]);
+  }
+
+  const M = portDaily.length;
+  const portNav = [1], benchNav = benchLogRets ? [1] : null;
+  for (let t = 0; t < M; t++) {
+    portNav.push(portNav[t] * Math.exp(portDaily[t]));
+    if (benchNav) benchNav.push(benchNav[t] * Math.exp(benchDaily[t]));
+  }
+  const annVol = r => { const m = r.reduce((s, x) => s + x, 0) / r.length; const v = r.reduce((s, x) => s + (x - m) ** 2, 0) / Math.max(r.length - 1, 1); return Math.sqrt(v) * Math.sqrt(252); };
+  const mddOf = nav => { let pk = nav[0], m = 0; for (const x of nav) { if (x > pk) pk = x; const d = (pk - x) / pk; if (d > m) m = d; } return m; };
+
+  const annReturn = Math.pow(Math.max(portNav[M], 1e-9), 252 / M) - 1;
+  const vol = annVol(portDaily);
+  const maxDrawdown = mddOf(portNav);
+  const stats = {
+    oosObservations: M, rebalances, lookback, rebalEvery,
+    totalReturn: portNav[M] - 1, annReturn, annVol: vol,
+    sharpe: vol > 1e-9 ? (annReturn - rf) / vol : 0,
+    maxDrawdown, calmar: maxDrawdown > 1e-9 ? annReturn / maxDrawdown : 0,
+  };
+  if (benchNav) {
+    const benchAnn = Math.pow(Math.max(benchNav[M], 1e-9), 252 / M) - 1;
+    const active = portDaily.map((r, t) => r - benchDaily[t]);
+    stats.benchAnnReturn = benchAnn;
+    stats.trackingError = annVol(active);
+    stats.infoRatio = stats.trackingError > 1e-9 ? (annReturn - benchAnn) / stats.trackingError : 0;
+    stats.winRate = portDaily.filter((r, t) => r > benchDaily[t]).length / M;
+  }
+  return { portNav, benchNav, portDaily, dates: oosDates, stats };
+}
+
 // ── Monte Carlo projection ─────────────────────────────────────────────────
 
 function normalCDF(x) {
@@ -1135,5 +1198,5 @@ export {
   marginalRiskContribution, maxDrawdown, portfolioVaR95,
   computeEquilibriumReturns, blackLittermanPosterior,
   solveMinVariance, solveMaxSharpe, solveRiskParity,
-  computeBacktest, runMonteCarlo
+  computeBacktest, walkForwardBacktest, runMonteCarlo
 };

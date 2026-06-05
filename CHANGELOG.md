@@ -79,6 +79,19 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
   no trade, simplex/cap preserved through the blend). 126 engine assertions total.
 - _Follow-up:_ UI controls (max-turnover slider + cost input) — engine ready; render pending login.
 
+### Added — Group 4 · Walk-forward out-of-sample backtest
+- **`engine.walkForwardBacktest`** — re-optimises on a rolling lookback window and holds those weights
+  over the following unseen period (rebalancing every `rebalEvery` days). Unlike `computeBacktest`
+  (in-sample / look-ahead), every day's return is earned by weights estimated strictly from the past —
+  the honest test of a strategy. Reuses `optimise()`, so it covers every mode + estimator. Reports
+  OOS annualised return / vol / Sharpe / max-drawdown / Calmar and (vs a benchmark) tracking error /
+  info ratio / win rate. See **ADR-0010**.
+- `scripts/test-walkforward.mjs` — 14 assertions including a **rigorous no-look-ahead proof**
+  (perturbing the final return changes only the final OOS day) and runs across modes. 140 engine
+  assertions total.
+- _Note:_ exported + tested in the engine; bundles via the (deferred) UI walk-forward panel — the
+  function is tree-shaken until the client imports it, like `computeBacktest`.
+
 ## Historical (auto-generated from git log)
 
 ### 2026-06-05
