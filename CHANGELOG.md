@@ -58,6 +58,18 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
 - `scripts/test-maxdiv.mjs` — 9 assertions (validity/constraints, DR ≥ 1, MDP ≥ equal-weight DR,
   determinism, wiring). **Group 2 complete; 104 engine assertions total.**
 
+### Added — Group 3a · PCA factor risk model
+- **Symmetric eigensolver** (`engine.jacobiEigen`, cyclic Jacobi) and a **PCA factor risk model**
+  (`engine.factorRiskModel`) — decomposes portfolio variance onto the principal components of Σ:
+  per-factor risk contribution = (wᵀv_j)²·λ_j / (wᵀΣw) (sums to 1). Reports the top-5 factors'
+  exposure (loading), variance explained, and risk share, plus a systematic-vs-specific split.
+  Now on every result (`result.factorRisk`). Lets a user see *where* portfolio risk comes from.
+  See **ADR-0008**.
+- `scripts/test-factor.mjs` — 12 assertions (eigensolver: Σλ=trace, orthonormality, VΛVᵀ
+  reconstruction; factor model: exact decomposition, single-factor dominance, wiring). 116 engine
+  assertions total.
+- _Follow-up:_ a UI factor-exposure panel (engine data is ready; render pending login verification).
+
 ## Historical (auto-generated from git log)
 
 ### 2026-06-05

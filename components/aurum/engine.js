@@ -883,6 +883,70 @@ function solveMinCVaR(returns, beta = 0.95, opts = {}) {
   return w;
 }
 
+// ── PCA factor risk model ───────────────────────────────────────────────────
+
+/**
+ * Symmetric eigendecomposition via the cyclic Jacobi algorithm.
+ * Returns eigenvalues (descending) and the matching eigenvectors (each an array
+ * of length n). Robust and accurate for the small symmetric covariance matrices
+ * used here (N ≤ ~45).
+ */
+function jacobiEigen(M, maxSweeps = 100) {
+  const n = M.length;
+  const a = M.map(r => r.slice());
+  const V = Array.from({ length: n }, (_, i) => { const e = new Array(n).fill(0); e[i] = 1; return e; });
+  for (let sweep = 0; sweep < maxSweeps; sweep++) {
+    let off = 0;
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) off += a[p][q] * a[p][q];
+    if (off < 1e-20) break;
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) {
+      const apq = a[p][q];
+      if (Math.abs(apq) < 1e-15) continue;
+      const theta = (a[q][q] - a[p][p]) / (2 * apq);
+      const t = theta === 0 ? 1 : Math.sign(theta) / (Math.abs(theta) + Math.sqrt(theta * theta + 1));
+      const c = 1 / Math.sqrt(t * t + 1), s = t * c;
+      for (let i = 0; i < n; i++) { const aip = a[i][p], aiq = a[i][q]; a[i][p] = c * aip - s * aiq; a[i][q] = s * aip + c * aiq; }
+      for (let i = 0; i < n; i++) { const api = a[p][i], aqi = a[q][i]; a[p][i] = c * api - s * aqi; a[q][i] = s * api + c * aqi; }
+      for (let i = 0; i < n; i++) { const vip = V[i][p], viq = V[i][q]; V[i][p] = c * vip - s * viq; V[i][q] = s * vip + c * viq; }
+    }
+  }
+  const vals = a.map((r, i) => r[i]);
+  const order = vals.map((_, i) => i).sort((x, y) => vals[y] - vals[x]);
+  return {
+    eigenvalues: order.map(i => vals[i]),
+    eigenvectors: order.map(i => V.map(row => row[i])),
+  };
+}
+
+/**
+ * PCA (statistical) factor risk model. Decomposes portfolio variance onto the
+ * principal components of Σ: factor risk contribution_j = (wᵀv_j)²·λ_j / (wᵀΣw),
+ * which sums to 1 exactly (orthonormal basis). Reports the top-k factors' loading
+ * (exposure), variance explained, and risk share, plus a systematic-vs-specific
+ * split (top-k = systematic). Lets a user see *where* portfolio risk comes from.
+ */
+function factorRiskModel(Sigma, weights, k = 5) {
+  const n = Sigma.length;
+  const { eigenvalues, eigenvectors } = jacobiEigen(Sigma);
+  const trace = eigenvalues.reduce((s, x) => s + x, 0);
+  const totalVar = Math.max(1e-18, portfolioVariance(weights, Sigma));
+  const all = eigenvalues.map((lam, j) => {
+    const exposure = dot(weights, eigenvectors[j]);
+    const lpos = Math.max(0, lam);
+    return { exposure, riskPct: (exposure * exposure * lpos) / totalVar, varExplained: trace > 0 ? lpos / trace : 0 };
+  });
+  const K = Math.min(k, n);
+  const factors = all.slice(0, K).map((f, j) => ({ id: 'PC' + (j + 1), ...f }));
+  const systematicRiskPct = factors.reduce((s, f) => s + f.riskPct, 0);
+  return {
+    nFactors: K,
+    factors,
+    systematicRiskPct,
+    specificRiskPct: Math.max(0, 1 - systematicRiskPct),
+    varExplainedTopK: factors.reduce((s, f) => s + f.varExplained, 0),
+  };
+}
+
 // ── Maximum Diversification (Choueifaty & Coignard, 2008) ───────────────────
 
 /** Diversification ratio: weighted-average asset vol ÷ portfolio vol (≥ 1). */
@@ -1014,6 +1078,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const var95 = portfolioVaR95(ret, risk);
   const cvar95 = portfolioCVaR95(optimal, alignedReturns);   // empirical 1-day CVaR (tail)
   const divRatio = diversificationRatio(optimal, Sigma);     // weighted-avg vol ÷ portfolio vol
+  const factorRisk = factorRiskModel(Sigma, optimal, 5);     // PCA factor exposure / risk split
 
   const assets = tickers.map((ticker, i) => ({
     ticker,
@@ -1029,7 +1094,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const msRisk = portfolioRisk(wMaxSharpe, Sigma);
 
   return {
-    tickers, mode, rf, mu, Sigma, correlation, frontier, covMeta, resample: resampleMeta,
+    tickers, mode, rf, mu, Sigma, correlation, frontier, covMeta, resample: resampleMeta, factorRisk,
     optimal: { weights: optimal, return: ret, risk, sharpe: sr, maxDrawdown: mdd, var95, cvar95, divRatio, assets },
     anchors: {
       minVariance: { weights: wMinVar, return: mvRet, risk: mvRisk, sharpe: sharpeRatio(mvRet, mvRisk, rf) },
@@ -1045,6 +1110,7 @@ export {
   buildMoments, regularise, covToCorr,
   ledoitWolfCovariance, ewmaCovariance, estimateMoments, resampleWeights, solveHRP,
   solveMinCVaR, portfolioCVaR95, solveMaxDiversification, diversificationRatio,
+  jacobiEigen, factorRiskModel,
   projectToSimplex, projectToSimplexBounded, enforceSectorCaps,
   portfolioReturn, portfolioVariance, portfolioRisk, sharpeRatio,
   marginalRiskContribution, maxDrawdown, portfolioVaR95,

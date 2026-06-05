@@ -27,7 +27,8 @@ a Monte-Carlo projection, a correlation map, and a printable PDF report.
 - **Robust (resampled) optimization** — Michaud-style bootstrap resampling averages weights over
   estimation noise for a more diversified, more stable allocation (opt-in toggle).
 - **Efficient frontier + Capital Market Line**, parametric VaR, max drawdown, marginal risk
-  contributions.
+  contributions, **historical CVaR**, **diversification ratio**, and a **PCA factor risk
+  decomposition** (systematic vs specific risk + per-factor portfolio exposures).
 - **Backtest vs SPY** (Sharpe, Calmar, tracking error, information ratio, monthly returns) and an
   **analytical Monte-Carlo** projection (P(loss), CVaR).
 - **Correlation heatmap**, a plain-English (non-AI) portfolio description, and **whole-share
