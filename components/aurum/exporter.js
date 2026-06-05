@@ -48,7 +48,7 @@ function chartImg(src, alt) {
 
 // ── Narrative block (mirrors drawPortfolioOverview logic) ──────────────────
 
-function buildNarrative(optResult, btResult) {
+function buildNarrative(optResult, btResult, benchSymbol = 'SPY') {
   const { mode, optimal, bl } = optResult;
   const { return: ret, risk, sharpe, maxDrawdown: mdd, var95, assets } = optimal;
 
@@ -71,7 +71,7 @@ function buildNarrative(optResult, btResult) {
 
   if (btResult) {
     const { portAnn, benchAnn, portMDD, winRate, benchAvailable } = btResult;
-    const vsStr = benchAvailable ? ` vs SPY ${sp(benchAnn)}` : '';
+    const vsStr = benchAvailable ? ` vs ${(benchSymbol || 'SPY').toUpperCase()} ${sp(benchAnn)}` : '';
     rows.push(['Realized (1Y)', `Backtest: ${sp(portAnn)} return${vsStr}, ${p(portMDD)} max drawdown, ${(winRate * 100).toFixed(0)}% daily win rate`]);
   }
 
@@ -437,11 +437,16 @@ const REPORT_CSS = `
 // ── Main export function ───────────────────────────────────────────────────
 
 export function generateReport({
-  optResult, btResult, mcResult, compareResults, alignedData, rf, rebalValue
+  optResult, btResult, mcResult, compareResults, alignedData, rf, rebalValue, benchSymbol = 'SPY'
 }) {
+  const BENCH     = (benchSymbol || 'SPY').toUpperCase();
   const date      = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   const iso       = new Date().toISOString().slice(0, 10);
-  const MODE_LBL  = { maxSharpe: 'Maximum Sharpe', minVariance: 'Minimum Variance', riskParity: 'Risk Parity', blackLitterman: 'Black-Litterman' };
+  const MODE_LBL  = {
+    maxSharpe: 'Maximum Sharpe', minVariance: 'Minimum Variance', riskParity: 'Risk Parity',
+    blackLitterman: 'Black-Litterman', hrp: 'Hierarchical Risk Parity', minCVaR: 'Minimum CVaR',
+    maxDiversification: 'Maximum Diversification',
+  };
   const modeLabel = MODE_LBL[optResult.mode] || optResult.mode;
   const { optimal, tickers } = optResult;
   const active = [...optimal.assets].filter(a => a.weight > 0.001).sort((a, b) => b.weight - a.weight);
@@ -483,7 +488,7 @@ export function generateReport({
       ['Sharpe (realized)', f(portSharpe),     benchAvailable ? f(benchSharpe)    : na, na],
       ['Max Drawdown',     `-${p(portMDD)}`,   benchAvailable ? `-${p(benchMDD)}` : na, na],
       ['Calmar Ratio',      f(portCalmar),     na,                                       na],
-      ['Win Rate vs SPY',   benchAvailable ? p(winRate)    : na, na, na],
+      [`Win Rate vs ${BENCH}`, benchAvailable ? p(winRate)    : na, na, na],
       ['Tracking Error',    benchAvailable ? p(trackingErr): na, na, na],
       ['Info. Ratio',       benchAvailable ? f(infoRatio)  : na, na, na],
     ].map(([lbl, port, bench, act]) =>
@@ -496,7 +501,7 @@ export function generateReport({
       ${chartImg(imgs.bt, 'Backtest NAV')}
       <div class="bt-grid">
         <table style="margin-top:14px;">
-          <thead><tr><th></th><th style="text-align:right">Portfolio</th><th style="text-align:right">SPY</th><th style="text-align:right">Active</th></tr></thead>
+          <thead><tr><th></th><th style="text-align:right">Portfolio</th><th style="text-align:right">${BENCH}</th><th style="text-align:right">Active</th></tr></thead>
           <tbody>${btRows}</tbody>
         </table>
       </div>
@@ -570,7 +575,7 @@ export function generateReport({
     <div class="metric-box neg"><div class="lbl">Max Drawdown</div><div class="val">-${p(optimal.maxDrawdown)}</div><div class="sub">Historical 1Y</div></div>
     <div class="metric-box neg"><div class="lbl">VaR 95% (1d)</div><div class="val">-${p(optimal.var95, 2)}</div><div class="sub">Parametric</div></div>
   </div>
-  <div class="narrative">${buildNarrative(optResult, btResult)}</div>
+  <div class="narrative">${buildNarrative(optResult, btResult, BENCH)}</div>
 </div>
 
 <!-- Section 2: Allocation + Charts -->

@@ -171,6 +171,18 @@
         <input type="checkbox" id="cov-resample"
                style="margin-left:auto;width:16px;height:16px;accent-color:#F5C518;cursor:pointer;">
       </div>
+      <div class="constraint-row" style="margin-top:10px">
+        <span class="constraint-label">Benchmark</span>
+        <select id="benchmark-select"
+                style="flex:1;background:#11150f;color:#e8ecdf;border:1px solid rgba(245,197,24,.3);border-radius:4px;padding:5px 8px;font-size:.8rem;">
+          <option value="SPY">SPY — S&amp;P 500</option>
+          <option value="QQQ">QQQ — Nasdaq 100</option>
+          <option value="DIA">DIA — Dow Jones 30</option>
+          <option value="IWM">IWM — Russell 2000</option>
+          <option value="ACWI">ACWI — MSCI All-World</option>
+          <option value="AGG">AGG — US Agg. Bonds</option>
+        </select>
+      </div>
     </div>
 
     <!-- Rebalancing (turnover-aware) — optional current-holdings entry -->

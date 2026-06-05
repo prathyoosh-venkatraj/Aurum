@@ -19,6 +19,11 @@ let _frontierChart = null;
 let _weightChart   = null;
 let _btChart       = null;
 let _mcChart       = null;
+
+// Selected benchmark (set from aurum.js before rendering). Drives the backtest
+// labels so they read e.g. "vs QQQ" instead of a hardcoded SPY.
+let _benchSymbol = 'SPY';
+export function setBenchmarkSymbol(sym) { _benchSymbol = (sym || 'SPY').toUpperCase(); }
 // Colour for the frontier's per-asset ticker labels (drawn by a custom plugin,
 // so it can't be restyled via chart.options). Darkened during export capture.
 let _assetLabelColor = '#999999';
@@ -929,7 +934,7 @@ export function drawBacktest(btResult, dates, modelReturn, oosMeta = null) {
   // ── Metrics rows ────────────────────────────────────────────────────────
 
   const sign   = v => v >= 0 ? 'bt-pos' : 'bt-neg';
-  const na     = benchAvailable ? '' : ' (SPY unavailable)';
+  const na     = benchAvailable ? '' : ` (${_benchSymbol} unavailable)`;
   const pctFmt = (v, dp = 1) => `${(v * 100).toFixed(dp)}%`;
 
   const modelVsReal = modelReturn !== undefined
@@ -948,7 +953,7 @@ export function drawBacktest(btResult, dates, modelReturn, oosMeta = null) {
     [isOOS ? 'Sharpe (out-of-sample)' : 'Sharpe (realized)',  portSharpe.toFixed(2), benchAvailable ? benchSharpe.toFixed(2) : '—', '—'],
     ['Max Drawdown',       `-${pctFmt(portMDD)}`, benchAvailable ? `-${pctFmt(benchMDD)}` : '—', '—'],
     ['Calmar Ratio',       portCalmar.toFixed(2), '—', '—'],
-    ['Win Rate vs SPY',    benchAvailable ? pctFmt(winRate) : '—', '—', '—'],
+    [`Win Rate vs ${_benchSymbol}`, benchAvailable ? pctFmt(winRate) : '—', '—', '—'],
     ['Tracking Error',     benchAvailable ? pctFmt(trackingErr) : '—', '—', '—'],
     ['Info. Ratio',        benchAvailable ? infoRatio.toFixed(2) : '—', '—', '—'],
   ].map(([lbl, port, bench, active]) => `
@@ -963,7 +968,7 @@ export function drawBacktest(btResult, dates, modelReturn, oosMeta = null) {
 
   const deltaSign = benchAvailable ? sign(portTotal - benchTotal) : '';
   const deltaTxt  = benchAvailable
-    ? `<span class="${deltaSign}">${s(portTotal - benchTotal)} vs SPY</span>`
+    ? `<span class="${deltaSign}">${s(portTotal - benchTotal)} vs ${_benchSymbol}</span>`
     : '';
 
   const titleTxt  = isOOS ? 'Out-of-Sample Performance' : 'Historical Performance';
@@ -995,7 +1000,7 @@ export function drawBacktest(btResult, dates, modelReturn, oosMeta = null) {
           <tr>
             <th></th>
             <th>Portfolio</th>
-            <th>SPY${na}</th>
+            <th>${_benchSymbol}${na}</th>
             <th>Active</th>
           </tr>
         </thead>
@@ -1041,7 +1046,7 @@ export function drawBacktest(btResult, dates, modelReturn, oosMeta = null) {
 
   if (benchAvailable) {
     datasets.push({
-      label: 'SPY',
+      label: _benchSymbol,
       data: benchNavDisplay,
       borderColor: '#555',
       borderWidth: 1.5,
@@ -1301,7 +1306,7 @@ function drawPortfolioOverview(result, btResult) {
   if (btResult) {
     const { portAnn, benchAnn, portMDD, winRate, benchAvailable } = btResult;
     const vsStr = benchAvailable
-      ? ` vs SPY ${(benchAnn >= 0 ? '+' : '') + pct(benchAnn)}`
+      ? ` vs ${_benchSymbol} ${(benchAnn >= 0 ? '+' : '') + pct(benchAnn)}`
       : '';
     rows.push({
       label: 'Realized (1Y)',

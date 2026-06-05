@@ -163,6 +163,19 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
   to dashes, and metric values bind correctly (local static preview, real renderer module). The PDF
   exporter uses the identical self-describing logic.
 
+### Added — UI · Selectable benchmark (Group 5)
+- **Benchmark picker** (Risk Model section) — the backtest benchmark is no longer hardcoded to SPY;
+  choose **SPY · QQQ · DIA · IWM · ACWI · AGG**. `fetchBenchmarkReturns(dates, symbol)` now takes the
+  symbol (per-symbol IndexedDB cache key so switching doesn't collide) and the chosen ETF flows into
+  the in-sample **and** walk-forward backtests.
+- **Labels follow the choice everywhere** — `renderer.setBenchmarkSymbol()` drives the backtest card
+  (column header, "Win Rate vs …", delta, NAV chart legend) and the portfolio-overview line; the PDF
+  report's `generateReport({ benchSymbol })` threads it through the narrative, the metrics table, and
+  the comparison footer. The exporter's mode-label map also gained HRP / Min-CVaR / Max-Div.
+- Verified live (local preview): the picker carries all six ETFs and switching to QQQ relabels the
+  backtest header, win-rate row, delta and chart legend. The per-symbol Yahoo fetch is a thin
+  parameterisation (verified by the user against the live proxy).
+
 ### 2026-06-05
 - ✨ **engine** Ledoit-Wolf + EWMA covariance estimators (Group 1a) (`9c9cfa7`)
 

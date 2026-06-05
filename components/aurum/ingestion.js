@@ -242,14 +242,17 @@ function alignBenchmarkToDates(spyDates, spyPrices, portDates) {
 }
 
 /**
- * Fetch SPY benchmark daily log returns aligned to the portfolio date array.
- * Uses same IndexedDB cache (24h TTL) as ticker history.
+ * Fetch benchmark daily log returns aligned to the portfolio date array.
+ * Uses same IndexedDB cache (24h TTL) as ticker history, keyed per symbol so
+ * switching benchmarks doesn't collide.
  *
- * @param {string[]} dates  Date array from fetchAlignedReturns
- * @returns {number[]}      T-length array of daily log returns (0 if SPY unavailable)
+ * @param {string[]} dates   Date array from fetchAlignedReturns
+ * @param {string}   symbol  Benchmark ETF symbol (default SPY)
+ * @returns {number[]}       T-length array of daily log returns (0 if unavailable)
  */
-export async function fetchBenchmarkReturns(dates) {
-  const BENCH_KEY = '__SPY_BENCH__';
+export async function fetchBenchmarkReturns(dates, symbol = 'SPY') {
+  const sym = (symbol || 'SPY').toUpperCase();
+  const BENCH_KEY = `__BENCH_${sym}__`;
 
   const cached = await idbGet(BENCH_KEY);
   if (cached && typeof cached.fetchedAt === 'number' && (Date.now() - cached.fetchedAt) < CACHE_TTL) {
@@ -257,7 +260,7 @@ export async function fetchBenchmarkReturns(dates) {
   }
 
   let res;
-  try { res = await fetch('/api/yahoo-proxy?symbol=SPY&mode=history&range=1y'); }
+  try { res = await fetch(`/api/yahoo-proxy?symbol=${encodeURIComponent(sym)}&mode=history&range=1y`); }
   catch { return new Array(dates.length).fill(0); }
 
   if (!res.ok || res.status === 204) return new Array(dates.length).fill(0);
@@ -265,11 +268,11 @@ export async function fetchBenchmarkReturns(dates) {
   const data = await res.json();
   if (!data.series || data.series.length < 30) return new Array(dates.length).fill(0);
 
-  const spyDates  = data.series.map(p => p.date);
-  const spyPrices = data.series.map(p => p.adjClose);
+  const benchDates  = data.series.map(p => p.date);
+  const benchPrices = data.series.map(p => p.adjClose);
 
-  await idbPut({ ticker: BENCH_KEY, dates: spyDates, prices: spyPrices, fetchedAt: Date.now() });
-  return alignBenchmarkToDates(spyDates, spyPrices, dates);
+  await idbPut({ ticker: BENCH_KEY, dates: benchDates, prices: benchPrices, fetchedAt: Date.now() });
+  return alignBenchmarkToDates(benchDates, benchPrices, dates);
 }
 
 /**

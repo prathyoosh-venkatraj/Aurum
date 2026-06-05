@@ -13,7 +13,7 @@ import {
 } from './components/aurum/state.js';
 
 import { fetchAlignedReturns, fetchRiskFreeRate, fetchMarketCaps, fetchBenchmarkReturns } from './components/aurum/ingestion.js';
-import { showResults, hideResults, drawRebalancing, drawComparePanel, drawBacktest } from './components/aurum/renderer.js';
+import { showResults, hideResults, drawRebalancing, drawComparePanel, drawBacktest, setBenchmarkSymbol } from './components/aurum/renderer.js';
 import { computeBacktest, runMonteCarlo, optimise } from './components/aurum/engine.js';
 import { generateReport } from './components/aurum/exporter.js';
 import { escapeHtml } from './components/aurum/escape.js';
@@ -578,9 +578,11 @@ async function runOptimisation() {
     alignedData = result;
 
     setStatusLoading('Fetching risk-free rate…');
+    const benchSymbol = document.getElementById('benchmark-select')?.value || 'SPY';
+    setBenchmarkSymbol(benchSymbol);   // drives backtest labels ("vs QQQ", etc.)
     [rf, benchmarkReturns] = await Promise.all([
       fetchRiskFreeRate(),
-      fetchBenchmarkReturns(alignedData.dates),
+      fetchBenchmarkReturns(alignedData.dates, benchSymbol),
     ]);
 
     if (state.optimisationMode === 'blackLitterman') {
@@ -843,6 +845,7 @@ function initExportButton() {
       alignedData,
       rf,
       rebalValue,
+      benchSymbol: document.getElementById('benchmark-select')?.value || 'SPY',
     });
   });
 }
