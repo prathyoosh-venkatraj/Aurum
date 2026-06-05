@@ -12,7 +12,7 @@ a Monte-Carlo projection, a correlation map, and a printable PDF report.
 
 > **[docs/HANDBOOK.md](docs/HANDBOOK.md)** — the full engine handbook & portfolio-theory reference:
 > the optimizer maths (with exact formulas), the data flow, the offline build pipeline, the
-> auth/proxy layer, assumptions, and a curated reading list. **Start here.**
+> access/proxy layer, assumptions, and a curated reading list. **Start here.**
 
 ## What it does
 

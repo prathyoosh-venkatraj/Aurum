@@ -1,7 +1,7 @@
 # Aurum — Engine Handbook & Portfolio-Theory Reference
 
 > A complete, plain-English map of everything inside Aurum: the optimization engine, the
-> portfolio-theory behind each formula, the data flow, the offline build pipeline, the auth/proxy
+> portfolio-theory behind each formula, the data flow, the offline build pipeline, the access/proxy
 > layer, the simplifying assumptions, and a curated reading list.
 >
 > Read this top-to-bottom once and you'll be able to (a) explain any number the app produces,
@@ -12,27 +12,29 @@
 
 ## 0. The one idea behind Aurum
 
-Aurum is a **login-gated, browser-based portfolio-optimization engine**. The user assembles a
-basket of equities from a curated ~500-name global universe; Aurum runs **institutional-style
-mean-variance optimization** (Markowitz) plus three sibling strategies, entirely client-side, and
-produces optimal weights, risk analytics, a backtest, a Monte-Carlo projection, a correlation map,
-a plain-English description, and a printable PDF report.
+Aurum is an **open, browser-based portfolio-optimization engine** (no login — a public, linkable
+showcase). The user assembles a basket of equities from a curated ~500-name global universe; Aurum
+runs **institutional-style mean-variance optimization** (Markowitz) plus six sibling strategies,
+entirely client-side, and produces optimal weights, risk analytics, a backtest (in-sample and
+walk-forward out-of-sample), a Monte-Carlo projection, a correlation map, a PCA factor-risk
+decomposition, a plain-English description, and a printable PDF report.
 
 The whole pipeline is **deterministic, explainable maths over live public prices** — the heavy
 linear algebra runs in the browser (in a Web Worker), so every number is auditable. The only
-things hidden server-side are **API keys** (behind Vercel proxies) and the **single login**.
+things hidden server-side are **API keys** (behind Vercel proxies).
 
 ```
-user picks tickers + constraints
+user picks tickers + constraints (+ optional current holdings, benchmark, risk model)
         │
         ▼
-ingestion (Yahoo prices via proxy, 1y) ──► aligned T×N log-returns, SPY, risk-free, market caps
+ingestion (Yahoo prices via proxy, 1y) ──► aligned T×N log-returns, benchmark, risk-free, market caps
         │
         ▼  (Web Worker)
-engine.optimise() ──► μ, Σ (shrunk), 60-pt efficient frontier, 4 optimizer modes, Black-Litterman
+engine.optimise() ──► μ, Σ (shrunk), 60-pt efficient frontier, 7 optimizer modes, Black-Litterman,
+                      factor-risk decomposition, turnover-aware rebalancing
         │
-        ▼  (main thread)
-backtest vs SPY · Monte-Carlo · 4-mode comparison
+        ▼  (main thread + a dedicated worker for the rolling re-optimisation)
+backtest vs benchmark · walk-forward OOS · Monte-Carlo · 7-mode comparison
         │
         ▼
 renderer (Chart.js + Canvas heatmap) · #po-card description · exporter (print → PDF)
@@ -44,8 +46,7 @@ renderer (Chart.js + Canvas heatmap) · #po-card description · exporter (print 
 
 ```
 (repo root = the deployed static site; outputDirectory ".")
-  index.html       ← the optimizer (auth-gated before paint)
-  login.html       ← HMAC-session gate
+  index.html       ← the optimizer (open access, no auth gate)
   portfolios.html  ← 12 pre-built model portfolios + whole-share allocation
   privacy.html
 
@@ -54,7 +55,8 @@ renderer (Chart.js + Canvas heatmap) · #po-card description · exporter (print 
   style.css → style.min.css
 
   components/aurum/                    ← bundled into the above; raw excluded from deploy
-    engine.js     ← PURE quant library (no DOM/IO): moments, 4 optimizers, frontier, backtest, MC
+    engine.js     ← PURE quant library (no DOM/IO): moments (Ledoit-Wolf/EWMA/sample), 7 optimizers,
+                    frontier, in-sample + walk-forward backtest, factor-risk model, turnover, MC
     worker.js → worker.min.js  ← Web Worker: runs engine.optimise() off the main thread
     ingestion.js  ← Yahoo/FRED fetch + IndexedDB cache + return alignment
     renderer.js   ← Chart.js charts + custom Canvas correlation heatmap + #po-card description
@@ -67,18 +69,19 @@ renderer (Chart.js + Canvas heatmap) · #po-card description · exporter (print 
     sample-portfolios.json  ← 12 pre-built model portfolios (weights + stats), refreshed weekly
 
   api/                       ← Vercel serverless functions (executed, NOT served)
-    auth.js          ← login / verify / logout (HMAC session)
-    yahoo-proxy.js   ← Yahoo prices (history, quote-summary)
+    yahoo-proxy.js   ← Yahoo prices (history, quote-summary); also the benchmark + market caps
     fred-proxy.js    ← FRED risk-free rate (DGS10) + VIX
-    explain.js       ← (legacy Groq endpoint; superseded by the non-AI #po-card description)
-    trigger-rebuild.js ← dispatches the portfolio-rebuild GitHub workflow (session-gated)
-    _session.js, _ratelimit.js   ← shared server-only helpers
+    trigger-rebuild.js ← dispatches the portfolio-rebuild GitHub workflow (admin Bearer-gated)
+    _session.js, _ratelimit.js   ← shared server-only helpers (_session = constant-time safeCompare)
+    (login/auth.js and the Groq explain.js were removed — see ADR-0011)
 
   scripts/                   ← OFFLINE tooling (excluded from deploy)
     build-web.mjs    ← esbuild bundle/minify of the client
     build-portfolios.mjs ← regenerates sample-portfolios.json (offline MVO over the universe)
-    verify-portfolio-stats.mjs, test-engine.mjs, test-allocation.mjs, test-escape.mjs
-  .github/workflows/  ci.yml (tests), rebuild-portfolios.yml (weekly + dispatch)
+    changelog.mjs    ← git-log → Discord embed / markdown digest (push-report workflow)
+    test-engine/allocation/escape + test-covariance/resample/hrp/cvar/maxdiv/factor/turnover/walkforward
+  .github/workflows/  ci.yml (tests), rebuild-portfolios.yml (weekly + dispatch),
+                      push-report.yml (→ Discord on push)
   vercel.json   ← framework null, security headers + CSP; .vercelignore keeps source off the web
 ```
 
@@ -120,7 +123,7 @@ enforceSectorCaps(w, sectors, cap)      // iteratively scale down over-cap secto
 feasible set (the capped probability simplex). Duchi's algorithm is the standard O(n log n)
 Euclidean projection onto the simplex; the bounded variant adds the per-asset cap.
 
-### 2.3 The four optimizer modes
+### 2.3 The seven optimizer modes
 
 **Minimum Variance** — projected gradient descent on portfolio variance:
 ```
@@ -147,6 +150,20 @@ then **Max-Sharpe on μ_BL**. `P`/`Q` are built from the user's absolute/relativ
 view confidence. *Theory:* BL fixes mean-variance's biggest flaw (extreme weights from noisy return
 estimates) by anchoring to what the market already implies and only tilting where you have a view.
 
+**Hierarchical Risk Parity (HRP)** — `solveHRP` (López de Prado, 2016): correlation-distance
+`d=√(½(1−ρ))` → single-linkage clustering → quasi-diagonalisation → recursive bisection with
+inverse-variance cluster allocation. **No matrix inversion**, so it survives ill-conditioned /
+near-singular covariance where MVO blows up. App weight/sector caps applied by projection.
+
+**Minimum CVaR** — `solveMinCVaR` minimises the 95% conditional value-at-risk (expected shortfall)
+of portfolio *loss* via the Rockafellar-Uryasev convex objective, solved by projected sub-gradient
+over the historical return scenarios. Targets the *tail*, not variance — better when returns are
+fat-tailed/skewed.
+
+**Maximum Diversification** — `solveMaxDiversification` maximises the Choueifaty diversification
+ratio `DR(w) = (wᵀσ) / √(wᵀΣw)` (weighted-average vol ÷ portfolio vol), the portfolio that extracts
+the most diversification benefit from the correlation structure.
+
 ### 2.4 Portfolio statistics
 ```
 Return         = wᵀμ
@@ -155,7 +172,15 @@ Sharpe         = (Return − rf) / σ_p
 MRC_i          = w_i·(Σw)_i / σ_p          // marginal risk contribution per asset
 Max Drawdown   = max peak-to-trough decline of the compounded NAV path
 VaR 95% (1-day)= −( μ/252 − 1.645·σ/√252 ) // parametric, one-day
+CVaR 95%       = empirical mean of the worst 5% of historical 1-day returns (tail / expected shortfall)
+Div. Ratio     = (wᵀσ) / √(wᵀΣw)            // Choueifaty diversification ratio
 ```
+Every result also carries a **PCA factor-risk decomposition** (`factorRiskModel`): the portfolio
+variance projected onto the principal components of Σ — per-factor risk share = `(wᵀv_j)²·λ_j /
+(wᵀΣw)` (sums to 1), reported as the top-5 factors' exposure/variance-explained/risk-share plus a
+systematic-vs-specific split. And, when current holdings are supplied, a **turnover-aware
+rebalance** caps one-way turnover by convex-blending the target toward the holdings and reports the
+trading-cost drag (`result.rebalance`).
 
 ### 2.5 Efficient frontier + Capital Market Line
 
@@ -163,13 +188,23 @@ Sweeps 60 risk-aversion values λ (quadratic spacing), maximising `λ·Return �
 (warm-started for speed), tracing the frontier curve. The **CML** is the line from `(0, rf)`
 tangent to the frontier at the max-Sharpe portfolio.
 
-### 2.6 Backtest (`computeBacktest`) — portfolio vs SPY over 1y
+### 2.6 Backtest (`computeBacktest`) — portfolio vs a selectable benchmark over 1y
 ```
 total & geometric-annualised return, realized volatility, realized Sharpe,
-max drawdown, Calmar (= annReturn/|maxDD|), daily win-rate vs SPY,
+max drawdown, Calmar (= annReturn/|maxDD|), daily win-rate vs the benchmark,
 active return, tracking error (stdev of active returns), information ratio,
 plus a year×month monthly-returns map.
 ```
+The benchmark is user-selectable (SPY / QQQ / DIA / IWM / ACWI / AGG). `computeBacktest` and the
+walk-forward backtest share `backtestStatsFromDaily(portDaily, benchDaily, dates, rf)`, so both
+render through the identical card.
+
+**Walk-forward out-of-sample (`walkForwardBacktest`)** — the honest test: re-optimise on a rolling
+`lookback`-day window and *hold* those weights over the next `rebalEvery` unseen days, stepping
+forward. Every day's return is earned by weights estimated **strictly from the past** (no
+look-ahead). Reuses `optimise()`, so it covers every mode + estimator; reports OOS return / vol /
+Sharpe / max-DD / Calmar and (vs the benchmark) tracking error / info ratio / win rate. Runs in a
+**dedicated worker** (it re-optimises many times) and is surfaced as a toggle on the backtest card.
 
 ### 2.7 Monte Carlo (`runMonteCarlo`) — analytical, not simulated
 
@@ -183,10 +218,12 @@ ln(NAV_t) ~ Normal( drift·t , σ²·t ),   drift = μ − ½σ²
 
 ## 3. Worker, ingestion, rendering, export
 
-**Worker (`worker.js`)** — receives `{alignedReturns, tickers, rf, mode, options}`, runs the single
-`engine.optimise()` (frontier + 4 solvers) off the main thread, returns `{ok, result}`. Backtest,
-Monte-Carlo and the 4-mode comparison run on the main thread afterward (the compare loop uses
-`skipFrontier`). Created as a **module worker** (`worker.min.js` after bundling).
+**Worker (`worker.js`)** — receives `{kind, alignedReturns, tickers, rf, mode, options}`. The default
+kind runs a single `engine.optimise()` (frontier + the 7 solvers) off the main thread; a
+`walkforward` kind runs the rolling OOS backtest (a dedicated worker instance, since it re-optimises
+many times). Returns `{ok, result}`. The in-sample backtest, Monte-Carlo and the 7-mode comparison
+run on the main thread afterward (the compare loop uses `skipFrontier`). Created as a **module
+worker** (`worker.min.js` after bundling).
 
 **Ingestion (`ingestion.js`)** — fetches 1y daily adj-close per ticker via `yahoo-proxy?mode=history`;
 **3-tier cache** (Vercel edge 24 h → client IndexedDB 24 h, serves stale on error → in-memory);
@@ -232,31 +269,34 @@ recomputed stats. Risk-free hard-coded 0.045.
 weekly cron. Scheduled run → `verify-portfolio-stats.mjs` (recompute *stats only* from live prices,
 keep curated weights, real β vs SPY); manual dispatch → full `build-portfolios.mjs` re-optimization.
 Commits `sample-portfolios.json` (push → Vercel redeploys). `ci.yml` runs the offline test suites
-(`test-engine`, `test-allocation`, `test-escape`) on push/PR + weekly.
+(`test-engine`/`-allocation`/`-escape` plus the per-feature suites `test-covariance`, `-resample`,
+`-hrp`, `-cvar`, `-maxdiv`, `-factor`, `-turnover`, `-walkforward` — 360+ deterministic assertions)
+on push/PR + weekly. `push-report.yml` posts a per-push change summary to Discord.
 
 ---
 
-## 5. Auth, proxies & security
+## 5. Access, proxies & security
 
-**Auth (`api/auth.js` + `_session.js`)** — single hard-coded user (`AURUM_USER_ID` /
-`AURUM_PASSWORD` env vars), HMAC-signed stateless **session cookie** (`HttpOnly; Secure;
-SameSite=Strict; 7-day`):
-```
-payload = base64url(userId : issuedAtMs : vVERSION);  token = payload + "." + HMAC_SHA256(payload, SESSION_SECRET)
-```
-Verification is **constant-time** (`timingSafeEqual`) and now **enforces in-code expiry** (issuedAt
-within 7 days) and **`SESSION_VERSION` revocation** (bump the env var to log everyone out). Login is
-**IP rate-limited** (5/min) + a 400 ms delay; attempts are audit-logged (never the password).
-`index.html` verifies the session before paint and redirects to `login.html` if invalid.
+**Open access (no login).** Aurum was previously behind an HMAC session login; it was removed
+(**ADR-0011**) because the gate protected nothing confidential — the optimiser is entirely
+client-side and the bundles/market data are already public. There is **no account, cookie, or
+auth**. The only sensitive op, `trigger-rebuild.js`, now requires an admin
+`Authorization: Bearer <REBUILD_SECRET>` (constant-time `safeCompare`, decoupled from any user
+identity) and is IP rate-limited (3/min); the weekly cron dispatches it directly. The Groq
+`explain.js` endpoint was also removed (key deleted; the non-AI `#po-card` description covers
+narrative). `_session.js` is reduced to `safeCompare`.
 
 **Proxies** — `yahoo-proxy` (history/quote-summary, cookie+crumb auth, regex-validated symbols,
-edge-cached, rate-limited via `_ratelimit.js`), `fred-proxy` (risk-free/VIX). `trigger-rebuild.js`
-is **session-gated + 3/min** and dispatches the rebuild workflow with `GITHUB_REBUILD_TOKEN`.
+edge-cached, rate-limited via `_ratelimit.js`; also serves the selectable benchmark + market caps),
+`fred-proxy` (risk-free/VIX).
 
-**Security posture** — keys server-side only; strong cookie flags; constant-time comparisons;
+**Security posture** — keys server-side only; constant-time comparison on the admin secret;
 CSP (report-only) + SRI on the pinned Chart.js CDN; `escapeHtml` on data-sourced `innerHTML`;
 distributed rate limiting (Upstash when configured); `.vercelignore` keeps `scripts/`, raw client
 sources and docs (incl. this handbook) off the public surface; the client is bundled/minified.
+Attack surface is *smaller* than the login era — no LLM-cost endpoint, no publicly-triggerable
+rebuild. *(Stale Vercel env vars to delete: `AURUM_USER_ID`, `AURUM_PASSWORD`, `SESSION_SECRET`,
+`SESSION_VERSION`, `GROQ_API_KEY`; set `REBUILD_SECRET` for manual rebuilds.)*
 
 ---
 
@@ -266,13 +306,16 @@ sources and docs (incl. this handbook) off the public surface; the client is bun
   garbage-in still applies. (BL mode exists precisely to mitigate this.)
 - **Single-period, long-only, fully-invested:** `Σw = 1`, `w ≥ 0` (no shorting, leverage, or cash).
 - **Returns are treated as i.i.d. log-normal** for the analytical Monte Carlo (no fat tails, no
-  autocorrelation, no regime changes); drawdown/VaR are parametric approximations.
-- **Covariance is static** over the lookback (no EWMA/GARCH conditioning).
-- **Backtest is in-sample-ish** (weights from the same window it's tested on) — a sanity check, not
-  a walk-forward.
+  autocorrelation, no regime changes); parametric VaR is one-day Gaussian (empirical CVaR and the
+  Min-CVaR mode address the tail directly).
+- **Covariance conditioning is optional:** sample by default, with Ledoit-Wolf shrinkage and EWMA
+  (RiskMetrics λ=0.94) selectable — but no GARCH.
+- **In-sample vs out-of-sample:** the default backtest fits and tests on the same window (a sanity
+  check); the **walk-forward toggle** gives the honest no-look-ahead test when you need it.
 - **Universe is screening metadata only;** prices/market-caps fetched live (so coverage depends on
   Yahoo). Pre-built portfolios are as fresh as the last weekly rebuild.
-- **Single shared login;** no MFA/lockout/audit beyond logs. Rate limits are soft without Upstash.
+- **Single-period, long-only, fully-invested** still holds for every mode; turnover control blends
+  toward held weights but does not optimise multi-period.
 - **Build-script β/MDD heuristics** differ from the live NAV-based stats (`verify-portfolio-stats`
   later corrects them).
 
@@ -297,6 +340,9 @@ None of these are bugs — they're the v1 scope, and each is a clean place to ad
 - **Maillard, Roncalli & Teïletche — "The Properties of Equally-Weighted Risk Contributions"** — risk parity / ERC.
 - **Duchi, Shalev-Shwartz, Singer & Chandra (2008) — "Efficient Projections onto the ℓ1-Ball / simplex"** — the projection step.
 - **Roncalli — "Introduction to Risk Parity and Budgeting"** — the definitive risk-parity reference.
+- **López de Prado (2016) — "Building Diversified Portfolios that Outperform Out of Sample"** — Hierarchical Risk Parity (`solveHRP`).
+- **Rockafellar & Uryasev (2000) — "Optimization of Conditional Value-at-Risk"** — the Min-CVaR objective.
+- **Choueifaty & Coignard (2008) — "Toward Maximum Diversification"** — the diversification ratio (`solveMaxDiversification`).
 
 ### 7.3 Risk, drawdown & simulation
 - ⭐ **Hull — "Options, Futures, and Other Derivatives"** — Itô's lemma / lognormal dynamics behind the analytical Monte Carlo.
@@ -317,23 +363,28 @@ None of these are bugs — they're the v1 scope, and each is a clean place to ad
 
 ## 8. How to give Aurum better prompts (using this document)
 
-- **Reference the engine:** *"In `engine.js`, add a maximum-diversification objective (maximise
-  wᵀσ / √(wᵀΣw)) as a 5th mode, with a Vitest-style test in `test-engine.mjs`."*
-- **Reference the theory:** *"Switch the covariance estimate to an EWMA (RiskMetrics λ=0.94) before
-  shrinkage, and expose the half-life as a constraint slider."*
-- **Reference the data flow:** *"Add a transaction-cost penalty to the rebalancing calculator using
-  a bps-per-trade input, and show net-of-cost expected return."*
+- **Reference the engine:** *"In `engine.js`, add a mean-CVaR objective (trade tail risk against
+  return) as a new mode, with a deterministic test in `scripts/test-cvar.mjs`."*
+- **Reference the theory:** *"Add a GARCH(1,1) conditional-covariance option to `estimateMoments`
+  alongside the existing sample / Ledoit-Wolf / EWMA estimators."*
+- **Reference the data flow:** *"Encode the selection + mode + constraints in the URL hash so a
+  portfolio config is shareable/restorable, and restore it on load."*
 - **Keep the invariants:** *"…pure in `engine.js` (no DOM/IO), run it through the worker, and after
   the change run `npm test`."* After any client edit: **run `npm run build-web` and commit the
   `.min` outputs** (Vercel does no build).
 
 ### Natural next directions (impact-for-effort)
-1. **Sensitivity / efficient-frontier scenario tools** (vary λ, constraints, risk-free → IRR/Sharpe surface).
-2. **EWMA / shrinkage-intensity choice** for Σ (RiskMetrics, Ledoit-Wolf optimal α).
-3. **Walk-forward backtest** (out-of-sample weights) to replace the in-sample sanity check.
-4. **Factor tilts / constraints** (sector min/max, ESG screens, turnover limits).
-5. **CVaR / mean-CVaR optimization** as an alternative objective to mean-variance.
-6. **Transaction costs & tax-aware rebalancing** in the whole-share allocator.
+1. **Shareable / saved portfolios** — URL-hash state (selection + mode + constraints + benchmark) so a
+   config is linkable and restorable.
+2. **Sensitivity / scenario tools** (sweep λ, constraints, risk-free → a Sharpe/return surface).
+3. **GARCH conditional covariance** to complement the sample / Ledoit-Wolf / EWMA estimators.
+4. **Sector / cardinality constraints** (min/max per sector, a cap on the number of holdings).
+5. **Simulated (path-based) Monte Carlo** to relax the lognormal-i.i.d. assumption of the analytical fan.
+6. **Multi-period / tax-aware rebalancing** building on the current single-period turnover control.
+
+*Already shipped since v1: Ledoit-Wolf + EWMA covariance, Michaud resampling, HRP, Min-CVaR, Max-
+Diversification, PCA factor risk, turnover-aware rebalancing, walk-forward OOS backtest, a selectable
+benchmark, and the seven-mode comparison.*
 
 ---
 

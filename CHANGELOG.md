@@ -176,6 +176,18 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
   backtest header, win-rate row, delta and chart legend. The per-symbol Yahoo fetch is a thin
   parameterisation (verified by the user against the live proxy).
 
+### Docs — HANDBOOK & README refresh (roadmap wrap-up)
+- Brought `docs/HANDBOOK.md` up to date with everything shipped since v1: **seven** optimizer modes
+  (added HRP / Min-CVaR / Max-Diversification with formulas + reading-list references), the three
+  covariance estimators, the PCA factor-risk decomposition, turnover-aware rebalancing, the
+  walk-forward OOS backtest, the selectable benchmark, and the 7-mode comparison.
+- Rewrote the **§5 "Access, proxies & security"** section for the **public-access model** (login /
+  HMAC session / Groq `explain` all removed per ADR-0011; `trigger-rebuild` admin-Bearer-gated;
+  `_session` reduced to `safeCompare`) and listed the stale Vercel env vars to delete. Refreshed the
+  architecture tree, the worker message protocol, the limitations, the test inventory, and the
+  "next directions" (now led by shareable/saved portfolios). README benchmark/handbook pointers
+  aligned. Docs-only — no code change.
+
 ### 2026-06-05
 - ✨ **engine** Ledoit-Wolf + EWMA covariance estimators (Group 1a) (`9c9cfa7`)
 
