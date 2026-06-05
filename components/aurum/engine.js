@@ -1016,7 +1016,10 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
     skipFrontier = false,
     covMethod    = 'sample',   // 'sample' | 'ledoitWolf' | 'ewma'
     resample     = false,      // Michaud resampled (robust) weights
-    resampleCount = 40
+    resampleCount = 40,
+    prevWeights   = null,      // current holdings, for turnover-aware rebalancing
+    turnoverBudget = null,     // cap on one-way turnover (fraction), null = no cap
+    txCostBps     = 0          // proportional trading cost (basis points), for reporting
   } = options;
 
   const { mu: muMV, Sigma, covMeta } = estimateMoments(alignedReturns, covMethod);
@@ -1068,6 +1071,22 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
     const rw = resampleWeights(alignedReturns, mode, rf, { count: resampleCount, maxWeight, sectorGroups, sectorCap, covMethod });
     if (rw) { optimal = rw; resampleMeta = { enabled: true, count: resampleCount }; }
   }
+
+  // Group 3b — turnover-aware rebalancing. If current holdings are supplied, cap
+  // one-way turnover by blending toward the target (a convex move that preserves
+  // the simplex + caps), and report turnover and the proportional trading cost.
+  let rebalance = null;
+  if (Array.isArray(prevWeights) && prevWeights.length === optimal.length) {
+    const oneWay = ww => 0.5 * ww.reduce((s, x, i) => s + Math.abs(x - prevWeights[i]), 0);
+    if (turnoverBudget != null && oneWay(optimal) > turnoverBudget) {
+      const full = oneWay(optimal);
+      const alpha = full > 1e-12 ? Math.max(0, Math.min(1, turnoverBudget / full)) : 0;
+      optimal = optimal.map((x, i) => prevWeights[i] + alpha * (x - prevWeights[i]));
+    }
+    const traded = optimal.reduce((s, x, i) => s + Math.abs(x - prevWeights[i]), 0);
+    rebalance = { turnover: traded / 2, tradedNotional: traded, costBps: txCostBps, costDrag: traded * (txCostBps / 10000) };
+  }
+
   const frontier = skipFrontier ? [] : traceEfficientFrontier(mu, Sigma, rf, 60, maxWeight, sectorGroups, sectorCap);
 
   const ret   = portfolioReturn(optimal, mu);
@@ -1094,7 +1113,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const msRisk = portfolioRisk(wMaxSharpe, Sigma);
 
   return {
-    tickers, mode, rf, mu, Sigma, correlation, frontier, covMeta, resample: resampleMeta, factorRisk,
+    tickers, mode, rf, mu, Sigma, correlation, frontier, covMeta, resample: resampleMeta, factorRisk, rebalance,
     optimal: { weights: optimal, return: ret, risk, sharpe: sr, maxDrawdown: mdd, var95, cvar95, divRatio, assets },
     anchors: {
       minVariance: { weights: wMinVar, return: mvRet, risk: mvRisk, sharpe: sharpeRatio(mvRet, mvRisk, rf) },

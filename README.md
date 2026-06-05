@@ -31,8 +31,9 @@ a Monte-Carlo projection, a correlation map, and a printable PDF report.
   decomposition** (systematic vs specific risk + per-factor portfolio exposures).
 - **Backtest vs SPY** (Sharpe, Calmar, tracking error, information ratio, monthly returns) and an
   **analytical Monte-Carlo** projection (P(loss), CVaR).
-- **Correlation heatmap**, a plain-English (non-AI) portfolio description, and **whole-share
-  rebalancing** by investment tier.
+- **Correlation heatmap**, a plain-English (non-AI) portfolio description, **whole-share
+  rebalancing** by investment tier, and **turnover-aware rebalancing** (cap turnover toward a target
+  from current holdings; report the proportional trading-cost drag).
 - 12 **pre-built model portfolios** (`portfolios.html`), refreshed weekly.
 
 ## Stack

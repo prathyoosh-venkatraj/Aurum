@@ -70,6 +70,15 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
   assertions total.
 - _Follow-up:_ a UI factor-exposure panel (engine data is ready; render pending login verification).
 
+### Added — Group 3b · Turnover-aware rebalancing & trading costs
+- **`optimise()` turnover support** — `prevWeights` (current holdings), `turnoverBudget` (one-way cap),
+  and `txCostBps`. When holdings are supplied, the optimizer caps turnover by blending toward the
+  target (a convex move that preserves the simplex + caps) and reports `result.rebalance`
+  (`turnover`, `tradedNotional`, `costDrag`). The first real-world-friction knob. See **ADR-0009**.
+- `scripts/test-turnover.mjs` — 10 assertions (meta/cost reporting, budget binds the cap, budget=0 ⇒
+  no trade, simplex/cap preserved through the blend). 126 engine assertions total.
+- _Follow-up:_ UI controls (max-turnover slider + cost input) — engine ready; render pending login.
+
 ## Historical (auto-generated from git log)
 
 ### 2026-06-05
