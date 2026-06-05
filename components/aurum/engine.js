@@ -737,6 +737,104 @@ function resampleWeights(returns, mode, rf, opts = {}) {
   return avg;
 }
 
+// ── Hierarchical Risk Parity (López de Prado, 2016) ─────────────────────────
+// Clusters assets by correlation distance, reorders (quasi-diagonalisation), and
+// splits weight by recursive bisection using inverse-variance cluster allocation.
+// Needs no matrix inversion → robust and well-behaved for large/ill-conditioned N.
+
+/** Single-linkage agglomerative clustering → SciPy-style linkage matrix Z. */
+function linkageSingle(dist) {
+  const N = dist.length;
+  let clusters = Array.from({ length: N }, (_, i) => ({ id: i, members: [i] }));
+  const clusterDist = (A, B) => {
+    let m = Infinity;
+    for (const a of A.members) for (const b of B.members) if (dist[a][b] < m) m = dist[a][b];
+    return m;
+  };
+  const Z = [];
+  let nextId = N;
+  while (clusters.length > 1) {
+    let bi = 0, bj = 1, bd = Infinity;
+    for (let i = 0; i < clusters.length; i++)
+      for (let j = i + 1; j < clusters.length; j++) {
+        const d = clusterDist(clusters[i], clusters[j]);
+        if (d < bd) { bd = d; bi = i; bj = j; }
+      }
+    const A = clusters[bi], B = clusters[bj];
+    Z.push([A.id, B.id, bd, A.members.length + B.members.length]);
+    const merged = { id: nextId++, members: [...A.members, ...B.members] };
+    clusters = clusters.filter((_, k) => k !== bi && k !== bj);
+    clusters.push(merged);
+  }
+  return Z;
+}
+
+/** Recover the quasi-diagonal leaf order from a linkage matrix. */
+function quasiDiag(Z, N) {
+  if (!Z.length) return [0];
+  let order = [Z[Z.length - 1][0], Z[Z.length - 1][1]];
+  let guard = 0;
+  while (order.some(i => i >= N) && guard++ < 10 * N + 10) {
+    const out = [];
+    for (const id of order) {
+      if (id >= N) { const r = Z[id - N]; out.push(r[0], r[1]); } else out.push(id);
+    }
+    order = out;
+  }
+  return order.map(x => Math.round(x));
+}
+
+/** Variance of an inverse-variance portfolio over a cluster of asset indices. */
+function clusterVar(cov, idxs) {
+  const ivp = idxs.map(i => 1 / Math.max(1e-18, cov[i][i]));
+  const s = ivp.reduce((a, b) => a + b, 0);
+  const w = ivp.map(x => x / s);
+  let v = 0;
+  for (let a = 0; a < idxs.length; a++)
+    for (let b = 0; b < idxs.length; b++) v += w[a] * cov[idxs[a]][idxs[b]] * w[b];
+  return v;
+}
+
+/** Recursive bisection: split weight between sibling clusters inversely to variance. */
+function recursiveBisection(cov, sortIx) {
+  const w = new Array(cov.length).fill(0);
+  for (const i of sortIx) w[i] = 1;
+  let cItems = [sortIx.slice()];
+  while (cItems.length > 0) {
+    const next = [];
+    for (const c of cItems) {
+      if (c.length <= 1) continue;
+      const mid = Math.floor(c.length / 2);
+      next.push(c.slice(0, mid), c.slice(mid));
+    }
+    cItems = next;
+    for (let i = 0; i < cItems.length; i += 2) {
+      const c0 = cItems[i], c1 = cItems[i + 1];
+      const v0 = clusterVar(cov, c0), v1 = clusterVar(cov, c1);
+      const alpha = (v0 + v1) > 0 ? 1 - v0 / (v0 + v1) : 0.5;
+      for (const j of c0) w[j] *= alpha;
+      for (const j of c1) w[j] *= (1 - alpha);
+    }
+  }
+  return w;
+}
+
+/** Full HRP allocation from a covariance matrix (long-only, sums to 1). */
+function solveHRP(Sigma) {
+  const N = Sigma.length;
+  if (N === 1) return [1];
+  const corr = covToCorr(Sigma);
+  const dist = corr.map((row, i) => row.map((c, j) => Math.sqrt(Math.max(0, 0.5 * (1 - c)))));
+  const Z = linkageSingle(dist);
+  const order = quasiDiag(Z, N);
+  if (order.length !== N || new Set(order).size !== N) {     // safety fallback: inverse-variance
+    const ivp = Sigma.map((r, i) => 1 / Math.max(1e-18, r[i]));
+    const s = ivp.reduce((a, b) => a + b, 0);
+    return ivp.map(x => x / s);
+  }
+  return recursiveBisection(Sigma, order);
+}
+
 function covToCorr(Sigma) {
   const n = Sigma.length;
   const std = Sigma.map((row, i) => Math.sqrt(Math.max(0, row[i])));
@@ -796,16 +894,21 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const wRiskParity = mode === 'riskParity'
     ? solveRiskParity(Sigma, maxWeight, sectorGroups, sectorCap)
     : null;
+  // Group 2a — Hierarchical Risk Parity (constraints applied via projection).
+  const wHRP = mode === 'hrp'
+    ? projectConstrained(solveHRP(Sigma), maxWeight, sectorGroups, sectorCap)
+    : null;
 
   // For BL mode the "optimal" is max-Sharpe on the posterior mu
   let optimal = mode === 'minVariance'  ? wMinVar
               : mode === 'riskParity'   ? wRiskParity
+              : mode === 'hrp'          ? wHRP
               : wMaxSharpe;
 
   // Group 1b — Michaud resampled (robust) weights for the active objective.
-  // Skipped for Black-Litterman (the posterior already blends a structured prior).
+  // Skipped for Black-Litterman and HRP (both already structurally robust).
   let resampleMeta = null;
-  if (resample && mode !== 'blackLitterman') {
+  if (resample && mode !== 'blackLitterman' && mode !== 'hrp') {
     const rw = resampleWeights(alignedReturns, mode, rf, { count: resampleCount, maxWeight, sectorGroups, sectorCap, covMethod });
     if (rw) { optimal = rw; resampleMeta = { enabled: true, count: resampleCount }; }
   }
@@ -846,7 +949,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
 // Named exports for unit testing and main thread use (worker.js only needs optimise)
 export {
   buildMoments, regularise, covToCorr,
-  ledoitWolfCovariance, ewmaCovariance, estimateMoments, resampleWeights,
+  ledoitWolfCovariance, ewmaCovariance, estimateMoments, resampleWeights, solveHRP,
   projectToSimplex, projectToSimplexBounded, enforceSectorCaps,
   portfolioReturn, portfolioVariance, portfolioRisk, sharpeRatio,
   marginalRiskContribution, maxDrawdown, portfolioVaR95,

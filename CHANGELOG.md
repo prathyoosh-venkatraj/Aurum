@@ -29,6 +29,16 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
 - `scripts/test-resample.mjs` — 13 assertions (per-mode validity/constraints, determinism, the
   diversification property vs single-shot, wiring). 77 engine assertions total, all passing.
 
+### Added — Group 2a · Hierarchical Risk Parity (HRP)
+- **HRP optimizer** (`engine.solveHRP`, mode `hrp`) — correlation-distance single-linkage clustering
+  → quasi-diagonalisation → recursive bisection with inverse-variance cluster allocation
+  (López de Prado, 2016). **No matrix inversion**, so it scales past the sample-covariance inversion
+  limit and is robust on ill-conditioned correlation structures. App weight/sector caps applied via
+  projection. New "Hierarchical Risk Parity" optimisation-mode radio. See **ADR-0005**.
+- `scripts/test-hrp.mjs` — 10 assertions (validity, the equal-variance cluster-balance property,
+  determinism, cap compliance, and greater diversification than max-Sharpe). 87 engine assertions
+  total, all passing.
+
 ## Historical (auto-generated from git log)
 
 ### 2026-06-05

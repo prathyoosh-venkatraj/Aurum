@@ -16,8 +16,9 @@ a Monte-Carlo projection, a correlation map, and a printable PDF report.
 
 ## What it does
 
-- **Four optimizer modes** — Minimum Variance, Maximum Sharpe, Risk Parity (ERC), and
-  **Black-Litterman** (market prior blended with user views).
+- **Five optimizer modes** — Minimum Variance, Maximum Sharpe, Risk Parity (ERC),
+  **Black-Litterman** (market prior blended with user views), and **Hierarchical Risk Parity (HRP)**
+  (correlation-clustered, recursive-bisection — no matrix inversion).
 - **Three covariance estimators** (Risk Model selector) — **Ledoit-Wolf shrinkage** (optimal
   data-driven intensity toward a constant-correlation target; the default), **EWMA** (RiskMetrics
   λ=0.94, volatility-clustering aware), and the raw **sample** covariance.
