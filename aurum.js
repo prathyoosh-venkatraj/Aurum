@@ -517,7 +517,8 @@ async function runOptimisation() {
       mktWeights:   mktWeights || null,
       maxWeight:    state.constraints.maxWeight,
       sectorCap:    state.constraints.sectorCap,
-      sectorGroups
+      sectorGroups,
+      covMethod:    document.getElementById('cov-method')?.value || 'ledoitWolf'
     }
   });
 }
@@ -591,7 +592,8 @@ async function runCompare() {
     sectorGroups,
     views:        [],
     mktWeights:   null,
-    skipFrontier: true
+    skipFrontier: true,
+    covMethod:    document.getElementById('cov-method')?.value || 'ledoitWolf'
   };
 
   // Yield to browser so the button state renders before heavy computation

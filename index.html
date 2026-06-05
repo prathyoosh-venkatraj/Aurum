@@ -145,6 +145,20 @@
       </div>
     </div>
 
+    <!-- Risk Model (covariance estimator) -->
+    <div class="panel-section">
+      <div class="section-label">Risk Model</div>
+      <div class="constraint-row">
+        <span class="constraint-label">Covariance</span>
+        <select id="cov-method"
+                style="flex:1;background:#11150f;color:#e8ecdf;border:1px solid rgba(245,197,24,.3);border-radius:4px;padding:5px 8px;font-size:.8rem;">
+          <option value="ledoitWolf">Ledoit-Wolf shrinkage</option>
+          <option value="ewma">EWMA (RiskMetrics λ=0.94)</option>
+          <option value="sample">Sample covariance</option>
+        </select>
+      </div>
+    </div>
+
     <!-- Views (Black-Litterman) — visible only in BL mode -->
     <div class="panel-section" id="views-section" style="display:none;">
       <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">

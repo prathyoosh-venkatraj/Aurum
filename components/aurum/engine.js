@@ -569,6 +569,120 @@ function buildMoments(returns) {
   return { mu, Sigma };
 }
 
+/**
+ * Ledoit-Wolf (2004) shrinkage toward a constant-correlation target.
+ * Computes the optimal, data-driven shrinkage intensity δ* and returns the
+ * annualised (×252) shrunk covariance Σ = δ·F + (1−δ)·S. This is the standard
+ * remedy for the estimation error that makes raw sample-covariance MVO unstable
+ * ("error maximisation"). δ ∈ [0,1]; δ→0 as the sample grows (more data → trust
+ * the sample), δ→1 when the sample is noisy relative to the structured target.
+ */
+function ledoitWolfCovariance(returns) {
+  const T = returns.length, N = returns[0].length;
+  const mean = new Array(N).fill(0);
+  for (const r of returns) for (let j = 0; j < N; j++) mean[j] += r[j];
+  for (let j = 0; j < N; j++) mean[j] /= T;
+  const X = returns.map(r => r.map((x, j) => x - mean[j]));   // demeaned daily
+
+  // Sample covariance S (1/T convention, per Ledoit-Wolf).
+  const S = zeros(N);
+  for (const row of X)
+    for (let i = 0; i < N; i++)
+      for (let j = i; j < N; j++) S[i][j] += row[i] * row[j];
+  for (let i = 0; i < N; i++)
+    for (let j = i; j < N; j++) { S[i][j] /= T; S[j][i] = S[i][j]; }
+
+  const std = new Array(N);
+  for (let i = 0; i < N; i++) std[i] = Math.sqrt(Math.max(1e-18, S[i][i]));
+
+  // Average off-diagonal sample correlation r̄.
+  let rSum = 0, rCnt = 0;
+  for (let i = 0; i < N; i++)
+    for (let j = i + 1; j < N; j++) { rSum += S[i][j] / (std[i] * std[j]); rCnt++; }
+  const rBar = rCnt ? rSum / rCnt : 0;
+
+  // Constant-correlation target F.
+  const F = zeros(N);
+  for (let i = 0; i < N; i++) {
+    F[i][i] = S[i][i];
+    for (let j = i + 1; j < N; j++) F[i][j] = F[j][i] = rBar * std[i] * std[j];
+  }
+
+  // π̂ = Σ_ij AsyVar(s_ij);  π_ij = (1/T) Σ_t (x_ti x_tj − s_ij)²
+  const piMat = zeros(N);
+  let piHat = 0;
+  for (let i = 0; i < N; i++)
+    for (let j = i; j < N; j++) {
+      let acc = 0;
+      for (let t = 0; t < T; t++) { const d = X[t][i] * X[t][j] - S[i][j]; acc += d * d; }
+      acc /= T;
+      piMat[i][j] = piMat[j][i] = acc;
+      piHat += (i === j) ? acc : 2 * acc;
+    }
+
+  // ρ̂ = Σ_i π_ii + Σ_{i≠j} (r̄/2)[√(s_jj/s_ii)·ϑ_ii,ij + √(s_ii/s_jj)·ϑ_jj,ij]
+  let rhoHat = 0;
+  for (let i = 0; i < N; i++) rhoHat += piMat[i][i];
+  for (let i = 0; i < N; i++)
+    for (let j = 0; j < N; j++) {
+      if (i === j) continue;
+      let tII = 0, tJJ = 0;
+      for (let t = 0; t < T; t++) {
+        const cij = X[t][i] * X[t][j] - S[i][j];
+        tII += (X[t][i] * X[t][i] - S[i][i]) * cij;
+        tJJ += (X[t][j] * X[t][j] - S[j][j]) * cij;
+      }
+      tII /= T; tJJ /= T;
+      rhoHat += (rBar / 2) * (Math.sqrt(S[j][j] / S[i][i]) * tII + Math.sqrt(S[i][i] / S[j][j]) * tJJ);
+    }
+
+  // γ̂ = ||F − S||²_F
+  let gammaHat = 0;
+  for (let i = 0; i < N; i++)
+    for (let j = 0; j < N; j++) { const d = F[i][j] - S[i][j]; gammaHat += d * d; }
+
+  let delta = gammaHat > 1e-18 ? ((piHat - rhoHat) / gammaHat) / T : 0;
+  delta = Math.max(0, Math.min(1, delta));
+
+  const Sigma = zeros(N);
+  for (let i = 0; i < N; i++)
+    for (let j = 0; j < N; j++)
+      Sigma[i][j] = (delta * F[i][j] + (1 - delta) * S[i][j]) * 252;
+
+  return { Sigma, shrinkage: delta };
+}
+
+/**
+ * RiskMetrics EWMA covariance — exponentially weighted so recent observations
+ * dominate, capturing volatility clustering that an equal-weighted sample
+ * covariance smooths away. λ=0.94 is the RiskMetrics daily default. PSD by
+ * construction (non-negative weighted sum of outer products). Annualised (×252).
+ */
+function ewmaCovariance(returns, lambda = 0.94) {
+  const T = returns.length, N = returns[0].length;
+  const mean = new Array(N).fill(0);
+  for (const r of returns) for (let j = 0; j < N; j++) mean[j] += r[j];
+  for (let j = 0; j < N; j++) mean[j] /= T;
+
+  const w = new Array(T);
+  let wSum = 0;
+  for (let t = 0; t < T; t++) { w[t] = Math.pow(lambda, T - 1 - t); wSum += w[t]; }
+  for (let t = 0; t < T; t++) w[t] /= wSum;
+
+  const Sigma = zeros(N);
+  for (let t = 0; t < T; t++) {
+    const x = returns[t], wt = w[t];
+    for (let i = 0; i < N; i++) {
+      const di = x[i] - mean[i];
+      for (let j = i; j < N; j++) Sigma[i][j] += wt * di * (x[j] - mean[j]);
+    }
+  }
+  for (let i = 0; i < N; i++)
+    for (let j = i; j < N; j++) { Sigma[i][j] *= 252; Sigma[j][i] = Sigma[i][j]; }
+
+  return { Sigma, lambda };
+}
+
 function covToCorr(Sigma) {
   const n = Sigma.length;
   const std = Sigma.map((row, i) => Math.sqrt(Math.max(0, row[i])));
@@ -601,10 +715,22 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
     maxWeight    = 1.0,
     sectorCap    = 1.0,
     sectorGroups = null,
-    skipFrontier = false
+    skipFrontier = false,
+    covMethod    = 'sample'   // 'sample' | 'ledoitWolf' | 'ewma'
   } = options;
 
-  const { mu: muMV, Sigma: SigmaRaw } = buildMoments(alignedReturns);
+  const { mu: muMV, Sigma: SigmaSample } = buildMoments(alignedReturns);
+  let SigmaRaw;
+  const covMeta = { method: covMethod };
+  if (covMethod === 'ledoitWolf') {
+    const lw = ledoitWolfCovariance(alignedReturns);
+    SigmaRaw = lw.Sigma; covMeta.shrinkage = lw.shrinkage;
+  } else if (covMethod === 'ewma') {
+    const ew = ewmaCovariance(alignedReturns);
+    SigmaRaw = ew.Sigma; covMeta.lambda = ew.lambda;
+  } else {
+    SigmaRaw = SigmaSample;
+  }
   const Sigma      = regularise(SigmaRaw);
   const correlation = covToCorr(Sigma);
 
@@ -654,7 +780,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const msRisk = portfolioRisk(wMaxSharpe, Sigma);
 
   return {
-    tickers, mode, rf, mu, Sigma, correlation, frontier,
+    tickers, mode, rf, mu, Sigma, correlation, frontier, covMeta,
     optimal: { weights: optimal, return: ret, risk, sharpe: sr, maxDrawdown: mdd, var95, assets },
     anchors: {
       minVariance: { weights: wMinVar, return: mvRet, risk: mvRisk, sharpe: sharpeRatio(mvRet, mvRisk, rf) },
@@ -668,6 +794,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
 // Named exports for unit testing and main thread use (worker.js only needs optimise)
 export {
   buildMoments, regularise, covToCorr,
+  ledoitWolfCovariance, ewmaCovariance,
   projectToSimplex, projectToSimplexBounded, enforceSectorCaps,
   portfolioReturn, portfolioVariance, portfolioRisk, sharpeRatio,
   marginalRiskContribution, maxDrawdown, portfolioVaR95,
