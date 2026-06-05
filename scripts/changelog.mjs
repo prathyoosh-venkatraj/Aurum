@@ -66,20 +66,31 @@ function commits(range) {
 
 const groupByType = list => list.reduce((g, c) => ((g[c.type] ??= []).push(c), g), {});
 
+// Strip trailers (Co-Authored-By, Signed-off-by) and collapse blank lines.
+const cleanBody = body => (body || '').split('\n')
+  .filter(l => !/^(Co-Authored-By|Signed-off-by):/i.test(l.trim()))
+  .join('\n').replace(/\n{3,}/g, '\n\n').trim();
+
+const shortRange = range => {
+  const m = (range || '').match(/^([0-9a-f]{7,40})\.\.([0-9a-f]{7,40})$/i);
+  return m ? `${m[1].slice(0, 7)}..${m[2].slice(0, 7)}` : (range || 'history');
+};
+
 function buildDiscord(list, range) {
   const compare = process.env.COMPARE_URL || (process.env.REPO ? `https://github.com/${process.env.REPO}/commits/main` : undefined);
-  const g = groupByType(list);
   let desc = '';
-  for (const k of Object.keys(TYPE)) {
-    if (!g[k]) continue;
-    desc += `\n**${TYPE[k].e} ${TYPE[k].t}**\n`;
-    for (const c of g[k]) desc += `• ${c.scope ? `\`${c.scope}\` ` : ''}${c.desc} \`${c.short}\`\n`;
+  for (const c of list) {                                   // newest first; subject + full body
+    const head = `${TYPE[c.type].e} **${c.scope ? `\`${c.scope}\` ` : ''}${c.desc}**  \`${c.short}\``;
+    const body = cleanBody(c.body);
+    const quoted = body ? '\n' + body.split('\n').map(l => (l ? `> ${l}` : '>')).join('\n') : '';
+    desc += `\n${head}${quoted}\n`;
   }
-  desc = (desc.trim() || '_No conventional commits in range._').slice(0, 3900);
+  desc = desc.trim() || '_No commits in range._';
+  if (desc.length > 4000) desc = desc.slice(0, 3970) + '\n… _(truncated)_';
   return { embeds: [{
     title: `🚀 ${label} — ${list.length} change${list.length === 1 ? '' : 's'} pushed`,
     url: compare, color, description: desc,
-    footer: { text: `${repoName} · ${range || 'history'}` },
+    footer: { text: `${repoName} · ${shortRange(range)}` },
     timestamp: new Date().toISOString(),
   }] };
 }
