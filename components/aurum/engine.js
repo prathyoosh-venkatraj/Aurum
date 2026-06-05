@@ -214,10 +214,21 @@ function portfolioVaR95(annReturn, annRisk) {
  * @param {number}     rf            Annual risk-free rate
  */
 function computeBacktest(weights, portLogRets, benchLogRets, dates, rf) {
-  const T = portLogRets.length;
+  const portDaily = portLogRets.map(day => dot(weights, day));
+  return backtestStatsFromDaily(portDaily, benchLogRets, dates, rf);
+}
 
-  const portDaily  = portLogRets.map(day => dot(weights, day));
-  const benchDaily = benchLogRets;
+/**
+ * Build the full backtest analytics object (NAV curves, annualised return/vol,
+ * Sharpe, drawdown, Calmar, win-rate, tracking error, info ratio, monthly grid)
+ * from an already-computed daily portfolio log-return series. Shared by the
+ * in-sample backtest (fixed weights) and the walk-forward OOS backtest (rolling
+ * weights), so both render through the identical `drawBacktest` card.
+ * `benchDaily` may be null/short — bench metrics are then marked unavailable.
+ */
+function backtestStatsFromDaily(portDaily, benchDaily, dates, rf) {
+  const T = portDaily.length;
+  benchDaily = (benchDaily && benchDaily.length === T) ? benchDaily : new Array(T).fill(0);
 
   // NAV series indexed to 1.0 — T+1 entries (initial + one per return day)
   const portNav  = [1];
@@ -355,7 +366,10 @@ function walkForwardBacktest(returns, tickers, rf, mode, opts = {}) {
     stats.infoRatio = stats.trackingError > 1e-9 ? (annReturn - benchAnn) / stats.trackingError : 0;
     stats.winRate = portDaily.filter((r, t) => r > benchDaily[t]).length / M;
   }
-  return { portNav, benchNav, portDaily, dates: oosDates, stats };
+  // Full drawBacktest-shaped analytics over the OOS series (so the UI can render
+  // the walk-forward result through the existing backtest card unchanged).
+  const backtest = backtestStatsFromDaily(portDaily, benchDaily.length ? benchDaily : null, oosDates, rf);
+  return { portNav, benchNav, portDaily, dates: oosDates, stats, backtest };
 }
 
 // ── Monte Carlo projection ─────────────────────────────────────────────────

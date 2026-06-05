@@ -13,7 +13,7 @@ import {
 } from './components/aurum/state.js';
 
 import { fetchAlignedReturns, fetchRiskFreeRate, fetchMarketCaps, fetchBenchmarkReturns } from './components/aurum/ingestion.js';
-import { showResults, hideResults, drawRebalancing, drawComparePanel } from './components/aurum/renderer.js';
+import { showResults, hideResults, drawRebalancing, drawComparePanel, drawBacktest } from './components/aurum/renderer.js';
 import { computeBacktest, runMonteCarlo, optimise } from './components/aurum/engine.js';
 import { generateReport } from './components/aurum/exporter.js';
 import { escapeHtml } from './components/aurum/escape.js';
@@ -355,6 +355,83 @@ function getWorker() {
   return _worker;
 }
 
+// ── Walk-forward (out-of-sample) backtest toggle ────────────────────────────
+// The backtest card carries a "Walk-forward (out-of-sample)" switch. Flipping it
+// on recomputes the rolling OOS backtest in a dedicated worker (it re-optimises
+// on each window, so it must stay off the main thread) and re-renders the same
+// card with the honest, no-look-ahead curve + metrics. Flipping it off restores
+// the in-sample backtest. Delegated once on the persistent #backtest-card node.
+function ensureWfDelegation() {
+  if (_wfDelegated) return;
+  const card = document.getElementById('backtest-card');
+  if (!card) return;
+  card.addEventListener('change', (e) => {
+    if (!e.target || e.target.id !== 'bt-wf-toggle') return;
+    if (e.target.checked) runWalkForward();
+    else restoreInSampleBacktest();
+  });
+  _wfDelegated = true;
+}
+
+function setWfBusy(busy, msg) {
+  const hint = document.getElementById('bt-wf-hint');
+  if (hint) hint.textContent = msg || '';
+  const toggle = document.getElementById('bt-wf-toggle');
+  if (toggle) toggle.disabled = busy;
+}
+
+function restoreInSampleBacktest() {
+  if (!_lastBtResult || !alignedData) return;
+  drawBacktest(_lastBtResult, alignedData.dates, _lastOptResult?.optimal?.return, null);
+}
+
+function runWalkForward() {
+  const ctx = _lastRunCtx;
+  if (!ctx) return;
+
+  // Reuse a cached OOS result for this run if we already computed it.
+  if (_wfResult && _wfResult.backtest) {
+    drawBacktest(_wfResult.backtest, _wfResult.dates, undefined, _wfResult.stats);
+    return;
+  }
+
+  setWfBusy(true, 'computing…');
+  const w = new Worker('./components/aurum/worker.min.js', { type: 'module' });
+  w.onmessage = (e) => {
+    w.terminate();
+    if (!e.data.ok) {
+      setWfBusy(false, 'failed');
+      restoreInSampleBacktest();
+      const t = document.getElementById('bt-wf-toggle'); if (t) t.checked = false;
+      return;
+    }
+    const wf = e.data.result;
+    if (!wf || !wf.backtest || !wf.dates?.length) {
+      setWfBusy(false, 'not enough history');
+      restoreInSampleBacktest();
+      const t = document.getElementById('bt-wf-toggle'); if (t) t.checked = false;
+      return;
+    }
+    _wfResult = wf;
+    drawBacktest(wf.backtest, wf.dates, undefined, wf.stats);
+    setWfBusy(false, '');
+  };
+  w.onerror = () => {
+    w.terminate();
+    setWfBusy(false, 'failed');
+    restoreInSampleBacktest();
+    const t = document.getElementById('bt-wf-toggle'); if (t) t.checked = false;
+  };
+  w.postMessage({
+    kind:           'walkforward',
+    alignedReturns: ctx.alignedReturns,
+    tickers:        ctx.tickers,
+    rf:             ctx.rf,
+    mode:           ctx.mode,
+    options:        { ...ctx.options, benchLogRets: ctx.benchLogRets, dates: ctx.dates },
+  });
+}
+
 // ── Build sector groups for constrained optimisation ──────────────────────
 
 function buildSectorGroups(tickers) {
@@ -377,6 +454,9 @@ let _lastOptResult       = null;
 let _lastBtResult        = null;
 let _lastMcResult        = null;
 let _lastCompareResults  = null;
+let _lastRunCtx          = null;   // inputs needed to recompute the walk-forward OOS backtest
+let _wfResult            = null;   // cached walk-forward result for the current run
+let _wfDelegated         = false;  // backtest-card toggle delegation attached once
 
 // ── Run optimisation ───────────────────────────────────────────────────────
 
@@ -495,6 +575,7 @@ async function runOptimisation() {
 
     showResults(optResult, btResult, mcResult, alignedData.dates);
     drawRebalancing(optResult, alignedData.latestPrices);
+    ensureWfDelegation();
     setTimeout(() => runCompare(), 0);
 
     const exportBtn = document.getElementById('export-btn');
@@ -507,20 +588,36 @@ async function runOptimisation() {
     setStatusError(`Worker error: ${err.message}`);
   };
 
+  const runOptions = {
+    views:        validViews,
+    mktWeights:   mktWeights || null,
+    maxWeight:    state.constraints.maxWeight,
+    sectorCap:    state.constraints.sectorCap,
+    sectorGroups,
+    covMethod:    document.getElementById('cov-method')?.value || 'ledoitWolf',
+    resample:     document.getElementById('cov-resample')?.checked || false
+  };
+
+  // Capture everything the walk-forward OOS backtest needs to recompute on demand
+  // (it re-runs optimise() on rolling windows, off the main thread). Resampling is
+  // dropped for WF — it would multiply an already-heavy rolling re-optimisation.
+  _lastRunCtx = {
+    alignedReturns: alignedData.alignedReturns,
+    tickers:        alignedData.tickers,
+    rf,
+    mode:           state.optimisationMode,
+    options:        { ...runOptions, resample: false },
+    benchLogRets:   benchmarkReturns,
+    dates:          alignedData.dates,
+  };
+  _wfResult = null;   // invalidate any prior run's OOS result
+
   worker.postMessage({
     alignedReturns: alignedData.alignedReturns,
     tickers:        alignedData.tickers,
     rf,
     mode:           state.optimisationMode,
-    options: {
-      views:        validViews,
-      mktWeights:   mktWeights || null,
-      maxWeight:    state.constraints.maxWeight,
-      sectorCap:    state.constraints.sectorCap,
-      sectorGroups,
-      covMethod:    document.getElementById('cov-method')?.value || 'ledoitWolf',
-      resample:     document.getElementById('cov-resample')?.checked || false
-    }
+    options:        runOptions
   });
 }
 

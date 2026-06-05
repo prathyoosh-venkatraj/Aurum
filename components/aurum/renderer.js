@@ -832,9 +832,11 @@ function monthColour(ret) {
   return `rgba(255,77,77,${(0.18 + t * 0.72).toFixed(2)})`;
 }
 
-export function drawBacktest(btResult, dates, modelReturn) {
+export function drawBacktest(btResult, dates, modelReturn, oosMeta = null) {
   const card = document.getElementById('backtest-card');
   if (!card) return;
+
+  const isOOS = !!oosMeta;
 
   const {
     portNav, benchNav, benchAvailable,
@@ -896,10 +898,10 @@ export function drawBacktest(btResult, dates, modelReturn) {
     : '';
 
   const rows = [
-    ['Total Return (1Y)',  s(portTotal),       benchAvailable ? s(benchTotal) : '—',  benchAvailable ? `<span class="${sign(activeAnn)}">${s(activeAnn)}</span>` : '—'],
+    [isOOS ? 'Total Return (OOS)' : 'Total Return (1Y)',  s(portTotal),       benchAvailable ? s(benchTotal) : '—',  benchAvailable ? `<span class="${sign(activeAnn)}">${s(activeAnn)}</span>` : '—'],
     ['Ann. Return',        s(portAnn),         benchAvailable ? s(benchAnn)   : '—',  '—'],
     ['Volatility',         pctFmt(portVol),    benchAvailable ? pctFmt(benchVol) : '—', '—'],
-    ['Sharpe (realized)',  portSharpe.toFixed(2), benchAvailable ? benchSharpe.toFixed(2) : '—', '—'],
+    [isOOS ? 'Sharpe (out-of-sample)' : 'Sharpe (realized)',  portSharpe.toFixed(2), benchAvailable ? benchSharpe.toFixed(2) : '—', '—'],
     ['Max Drawdown',       `-${pctFmt(portMDD)}`, benchAvailable ? `-${pctFmt(benchMDD)}` : '—', '—'],
     ['Calmar Ratio',       portCalmar.toFixed(2), '—', '—'],
     ['Win Rate vs SPY',    benchAvailable ? pctFmt(winRate) : '—', '—', '—'],
@@ -920,11 +922,23 @@ export function drawBacktest(btResult, dates, modelReturn) {
     ? `<span class="${deltaSign}">${s(portTotal - benchTotal)} vs SPY</span>`
     : '';
 
+  const titleTxt  = isOOS ? 'Out-of-Sample Performance' : 'Historical Performance';
+  const windowTxt = isOOS
+    ? `(walk-forward · ${oosMeta.oosObservations} OOS days · ${oosMeta.rebalances} rebalances · ${oosMeta.lookback}d lookback)`
+    : `(1Y backtest, ${T} trading days)`;
+
   card.style.display = 'block';
   card.innerHTML = `
     <div class="bt-header">
-      <span class="panel-card-header">Historical Performance&ensp;<span class="bt-window">(1Y backtest, ${T} trading days)</span></span>
-      <span class="bt-delta">${deltaTxt}</span>
+      <span class="panel-card-header">${titleTxt}&ensp;<span class="bt-window">${windowTxt}</span></span>
+      <span class="bt-header-right">
+        <label class="bt-wf-switch" title="Re-optimise on rolling past windows and hold the weights over the next unseen period — the honest, no-look-ahead test of the strategy.">
+          <input type="checkbox" id="bt-wf-toggle"${isOOS ? ' checked' : ''}>
+          <span>Walk-forward (OOS)</span>
+        </label>
+        <span class="bt-wf-hint" id="bt-wf-hint"></span>
+        <span class="bt-delta">${deltaTxt}</span>
+      </span>
     </div>
 
     <div class="bt-nav-wrap">

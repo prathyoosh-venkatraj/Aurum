@@ -90,8 +90,8 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
 - `scripts/test-walkforward.mjs` — 14 assertions including a **rigorous no-look-ahead proof**
   (perturbing the final return changes only the final OOS day) and runs across modes. 140 engine
   assertions total.
-- _Note:_ exported + tested in the engine; bundles via the (deferred) UI walk-forward panel — the
-  function is tree-shaken until the client imports it, like `computeBacktest`.
+- _Follow-up (done):_ now surfaced as a **walk-forward toggle on the backtest card** — see
+  **UI · Walk-forward toggle** below. The function is no longer tree-shaken (the worker imports it).
 
 ### Changed / Removed — Public access (login removed)
 - **Removed the login** — deleted `login.html`, `api/auth.js`, the client verify/redirect gate, the
@@ -115,6 +115,23 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
   styling; new `.factor-split*` CSS for the split bar. The PCA factor model (Group 3a) was
   engine-only until now; this makes *where portfolio risk comes from* visible in the UI. No engine
   change — verified end-to-end against the live render (local static preview, real module + CSS).
+
+### Added — UI · Walk-forward toggle (surfaces Group 4)
+- **"Walk-forward (out-of-sample)" toggle on the backtest card** — flipping it on re-renders the
+  same card with the honest, no-look-ahead OOS curve + metrics (`Total Return (OOS)`,
+  `Sharpe (out-of-sample)`, OOS max-DD / Calmar / tracking error / info ratio) and a header that
+  reports the rolling setup (`N OOS days · K rebalances · Md lookback`); flipping it off restores
+  the in-sample backtest. Result is cached per run.
+- **Engine refactor (no behaviour change):** extracted `backtestStatsFromDaily(portDaily,
+  benchDaily, dates, rf)` so both the in-sample backtest (fixed weights) and walk-forward (rolling
+  weights) produce the **identical** `drawBacktest` shape; `computeBacktest` now delegates to it and
+  `walkForwardBacktest` returns an extra `backtest` field. All 364 engine assertions unchanged.
+- **Worker protocol:** the worker now handles a `kind:'walkforward'` message and imports
+  `walkForwardBacktest` (so it is no longer tree-shaken). The rolling re-optimisation runs in a
+  **dedicated worker** off the main thread; resampling is dropped for WF (it would multiply an
+  already-heavy computation). `renderer.drawBacktest` gained an optional `oosMeta` param.
+- Verified end-to-end: WF output carries the full `drawBacktest` shape (node), and both OOS and
+  in-sample renders are correct against the live module + Chart.js (local static preview).
 
 ### 2026-06-05
 - ✨ **engine** Ledoit-Wolf + EWMA covariance estimators (Group 1a) (`9c9cfa7`)

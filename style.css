@@ -1294,6 +1294,41 @@ input { font-family: var(--font-mono); }
 }
 .bt-delta.bt-pos { color: #4CAF50; }
 .bt-delta.bt-neg { color: var(--red); }
+
+/* Walk-forward (out-of-sample) toggle in the backtest header */
+.bt-header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.bt-wf-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted, #777);
+  cursor: pointer;
+  user-select: none;
+}
+.bt-wf-switch input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+.bt-wf-switch input[type="checkbox"]:checked + span { color: var(--gold); }
+.bt-wf-switch input[type="checkbox"]:disabled { cursor: progress; opacity: 0.5; }
+.bt-wf-hint {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  color: var(--gold-dim, #b8902a);
+  text-transform: none;
+}
 .bt-nav-wrap {
   position: relative;
   height: 200px;
