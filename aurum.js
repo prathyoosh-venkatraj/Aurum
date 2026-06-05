@@ -518,7 +518,8 @@ async function runOptimisation() {
       maxWeight:    state.constraints.maxWeight,
       sectorCap:    state.constraints.sectorCap,
       sectorGroups,
-      covMethod:    document.getElementById('cov-method')?.value || 'ledoitWolf'
+      covMethod:    document.getElementById('cov-method')?.value || 'ledoitWolf',
+      resample:     document.getElementById('cov-resample')?.checked || false
     }
   });
 }

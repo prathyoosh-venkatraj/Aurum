@@ -19,6 +19,16 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
   recency weighting, valid simplex weights under each method, determinism). The 42 existing engine
   tests are unchanged.
 
+### Added — Group 1b · Resampled (robust) optimization
+- **Michaud resampled portfolio** (`engine.resampleWeights`) — deterministic bootstrap of the return
+  history, re-estimate + re-optimise per resample, average the weights; more diversified and stable
+  than single-shot MVO. Opt-in via the `resample` option + a "Robust (resampled)" UI toggle; result
+  exposes a `resample` meta block. Skipped for Black-Litterman. See **ADR-0004**.
+- Refactor: `estimateMoments()` centralises covariance-method selection (shared by `optimise` and
+  resampling).
+- `scripts/test-resample.mjs` — 13 assertions (per-mode validity/constraints, determinism, the
+  diversification property vs single-shot, wiring). 77 engine assertions total, all passing.
+
 ## Historical (auto-generated from git log)
 
 ### 2026-06-05

@@ -683,6 +683,60 @@ function ewmaCovariance(returns, lambda = 0.94) {
   return { Sigma, lambda };
 }
 
+/** Annualised moments with the chosen covariance estimator (+ ridge for inversion). */
+function estimateMoments(returns, covMethod = 'sample') {
+  const { mu, Sigma: SigmaSample } = buildMoments(returns);
+  let SigmaRaw;
+  const covMeta = { method: covMethod };
+  if (covMethod === 'ledoitWolf') { const lw = ledoitWolfCovariance(returns); SigmaRaw = lw.Sigma; covMeta.shrinkage = lw.shrinkage; }
+  else if (covMethod === 'ewma')  { const ew = ewmaCovariance(returns);       SigmaRaw = ew.Sigma; covMeta.lambda = ew.lambda; }
+  else SigmaRaw = SigmaSample;
+  return { mu, Sigma: regularise(SigmaRaw), covMeta };
+}
+
+/** Deterministic PRNG (mulberry32) for reproducible bootstrap resampling. */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Michaud-style resampled portfolio. Bootstraps the return history `count` times,
+ * re-estimates moments + re-optimises the active objective on each resample, and
+ * averages the weights. Averaging over estimation noise yields a more diversified,
+ * more stable allocation than a single-shot MVO (which over-fits the sample).
+ * Deterministic (seeded from the data shape). Long-only / cap / sector constraints
+ * are convex, so the average is feasible; we re-project for exactness.
+ */
+function resampleWeights(returns, mode, rf, opts = {}) {
+  const { count = 40, maxWeight = 1.0, sectorGroups = null, sectorCap = 1.0, covMethod = 'sample' } = opts;
+  const T = returns.length, N = returns[0].length;
+  const rng = mulberry32((0x5EED ^ (T * 131 + N * 17)) >>> 0);
+  const acc = new Array(N).fill(0);
+  let valid = 0;
+
+  for (let k = 0; k < count; k++) {
+    const R = new Array(T);
+    for (let t = 0; t < T; t++) R[t] = returns[(rng() * T) | 0];   // bootstrap rows
+    const { mu, Sigma } = estimateMoments(R, covMethod);
+    let w;
+    if (mode === 'minVariance')      w = solveMinVariance(Sigma, 2000, 1e-9, maxWeight, sectorGroups, sectorCap);
+    else if (mode === 'riskParity')  w = solveRiskParity(Sigma, maxWeight, sectorGroups, sectorCap);
+    else                             w = solveMaxSharpe(mu, Sigma, rf, 2000, 1e-9, maxWeight, sectorGroups, sectorCap);
+    if (w && w.every(Number.isFinite)) { for (let i = 0; i < N; i++) acc[i] += w[i]; valid++; }
+  }
+  if (!valid) return null;
+
+  let avg = acc.map(x => x / valid);
+  avg = projectToSimplexBounded(avg, Math.max(maxWeight, 1 / N));
+  if (sectorGroups && sectorCap < 1) avg = enforceSectorCaps(avg, sectorGroups, sectorCap);
+  return avg;
+}
+
 function covToCorr(Sigma) {
   const n = Sigma.length;
   const std = Sigma.map((row, i) => Math.sqrt(Math.max(0, row[i])));
@@ -716,22 +770,12 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
     sectorCap    = 1.0,
     sectorGroups = null,
     skipFrontier = false,
-    covMethod    = 'sample'   // 'sample' | 'ledoitWolf' | 'ewma'
+    covMethod    = 'sample',   // 'sample' | 'ledoitWolf' | 'ewma'
+    resample     = false,      // Michaud resampled (robust) weights
+    resampleCount = 40
   } = options;
 
-  const { mu: muMV, Sigma: SigmaSample } = buildMoments(alignedReturns);
-  let SigmaRaw;
-  const covMeta = { method: covMethod };
-  if (covMethod === 'ledoitWolf') {
-    const lw = ledoitWolfCovariance(alignedReturns);
-    SigmaRaw = lw.Sigma; covMeta.shrinkage = lw.shrinkage;
-  } else if (covMethod === 'ewma') {
-    const ew = ewmaCovariance(alignedReturns);
-    SigmaRaw = ew.Sigma; covMeta.lambda = ew.lambda;
-  } else {
-    SigmaRaw = SigmaSample;
-  }
-  const Sigma      = regularise(SigmaRaw);
+  const { mu: muMV, Sigma, covMeta } = estimateMoments(alignedReturns, covMethod);
   const correlation = covToCorr(Sigma);
 
   // Determine effective mu
@@ -754,9 +798,17 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
     : null;
 
   // For BL mode the "optimal" is max-Sharpe on the posterior mu
-  const optimal = mode === 'minVariance'  ? wMinVar
-                : mode === 'riskParity'   ? wRiskParity
-                : wMaxSharpe;
+  let optimal = mode === 'minVariance'  ? wMinVar
+              : mode === 'riskParity'   ? wRiskParity
+              : wMaxSharpe;
+
+  // Group 1b — Michaud resampled (robust) weights for the active objective.
+  // Skipped for Black-Litterman (the posterior already blends a structured prior).
+  let resampleMeta = null;
+  if (resample && mode !== 'blackLitterman') {
+    const rw = resampleWeights(alignedReturns, mode, rf, { count: resampleCount, maxWeight, sectorGroups, sectorCap, covMethod });
+    if (rw) { optimal = rw; resampleMeta = { enabled: true, count: resampleCount }; }
+  }
   const frontier = skipFrontier ? [] : traceEfficientFrontier(mu, Sigma, rf, 60, maxWeight, sectorGroups, sectorCap);
 
   const ret   = portfolioReturn(optimal, mu);
@@ -780,7 +832,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const msRisk = portfolioRisk(wMaxSharpe, Sigma);
 
   return {
-    tickers, mode, rf, mu, Sigma, correlation, frontier, covMeta,
+    tickers, mode, rf, mu, Sigma, correlation, frontier, covMeta, resample: resampleMeta,
     optimal: { weights: optimal, return: ret, risk, sharpe: sr, maxDrawdown: mdd, var95, assets },
     anchors: {
       minVariance: { weights: wMinVar, return: mvRet, risk: mvRisk, sharpe: sharpeRatio(mvRet, mvRisk, rf) },
@@ -794,7 +846,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
 // Named exports for unit testing and main thread use (worker.js only needs optimise)
 export {
   buildMoments, regularise, covToCorr,
-  ledoitWolfCovariance, ewmaCovariance,
+  ledoitWolfCovariance, ewmaCovariance, estimateMoments, resampleWeights,
   projectToSimplex, projectToSimplexBounded, enforceSectorCaps,
   portfolioReturn, portfolioVariance, portfolioRisk, sharpeRatio,
   marginalRiskContribution, maxDrawdown, portfolioVaR95,
