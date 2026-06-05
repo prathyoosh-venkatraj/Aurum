@@ -1,0 +1,42 @@
+name: Push Report → Discord
+
+# Posts a per-push summary of the pushed commits (grouped by Conventional-Commit
+# type) to the NovaSect Discord #updates-and-implementation channel.
+#
+# Required secret:
+#   DISCORD_UPDATES_WEBHOOK_URL — webhook for #updates-and-implementation
+# If the secret is unset the job still succeeds (prints the payload, posts nothing),
+# so this never blocks a deploy before the webhook is configured.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: push-report-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  report:
+    name: Post push summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout (full history for the commit range)
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Set up Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Post push summary
+        env:
+          DISCORD_UPDATES_WEBHOOK_URL: ${{ secrets.DISCORD_UPDATES_WEBHOOK_URL }}
+          RANGE: ${{ github.event.before }}..${{ github.event.after }}
+          COMPARE_URL: ${{ github.event.compare }}
+          REPO: ${{ github.repository }}
+        run: node scripts/changelog.mjs --discord
