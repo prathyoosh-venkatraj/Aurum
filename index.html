@@ -173,6 +173,36 @@
       </div>
     </div>
 
+    <!-- Rebalancing (turnover-aware) — optional current-holdings entry -->
+    <div class="panel-section">
+      <div class="section-label">Rebalancing</div>
+      <div class="constraint-row">
+        <span class="constraint-label">From current holdings</span>
+        <input type="checkbox" id="rebal-enable"
+               style="margin-left:auto;width:16px;height:16px;accent-color:#F5C518;cursor:pointer;">
+      </div>
+      <div id="rebal-controls" style="display:none;margin-top:10px;">
+        <div class="constraint-row">
+          <span class="constraint-label">Max Turnover</span>
+          <input type="range" id="turnover-budget" class="constraint-slider"
+                 min="0" max="100" step="5" value="100">
+          <span class="constraint-val" id="turnover-val">100%</span>
+        </div>
+        <div class="constraint-row" style="margin-top:10px">
+          <span class="constraint-label">Trading Cost</span>
+          <input type="number" id="tx-cost-bps" min="0" max="500" step="1" value="10"
+                 style="width:64px;margin-left:auto;background:#11150f;color:#e8ecdf;border:1px solid rgba(245,197,24,.3);border-radius:4px;padding:4px 6px;font-size:.78rem;">
+          <span class="constraint-val" style="min-width:auto;">bps</span>
+        </div>
+        <div class="rebal-holdings-head">
+          <span>Current weight per holding</span>
+          <button type="button" id="rebal-equalize" class="add-view-btn">Equal-weight</button>
+        </div>
+        <div id="rebal-holdings" class="rebal-holdings"></div>
+        <div class="rebal-holdings-foot" id="rebal-holdings-foot"></div>
+      </div>
+    </div>
+
     <!-- Views (Black-Litterman) — visible only in BL mode -->
     <div class="panel-section" id="views-section" style="display:none;">
       <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
@@ -252,6 +282,9 @@
 
       <!-- Monte Carlo Projection -->
       <div class="mc-card" id="mc-card" style="display:none;"></div>
+
+      <!-- Turnover-aware rebalancing readout (only when current holdings supplied) -->
+      <div id="turnover-card" class="bl-panel" style="display:none;"></div>
 
       <!-- Rebalancing Calculator -->
       <div class="rebal-card" id="rebal-card" style="display:none;"></div>

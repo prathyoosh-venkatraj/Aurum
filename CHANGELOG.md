@@ -78,7 +78,7 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
   (`turnover`, `tradedNotional`, `costDrag`). The first real-world-friction knob. See **ADR-0009**.
 - `scripts/test-turnover.mjs` — 10 assertions (meta/cost reporting, budget binds the cap, budget=0 ⇒
   no trade, simplex/cap preserved through the blend). 126 engine assertions total.
-- _Follow-up:_ UI controls (max-turnover slider + cost input) — engine ready; render pending login.
+- _Follow-up (done):_ UI controls now live — see **UI · Turnover controls** below.
 
 ### Added — Group 4 · Walk-forward out-of-sample backtest
 - **`engine.walkForwardBacktest`** — re-optimises on a rolling lookback window and holds those weights
@@ -132,6 +132,23 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
   already-heavy computation). `renderer.drawBacktest` gained an optional `oosMeta` param.
 - Verified end-to-end: WF output carries the full `drawBacktest` shape (node), and both OOS and
   in-sample renders are correct against the live module + Chart.js (local static preview).
+
+### Added — UI · Turnover controls (surfaces Group 3b)
+- **"Rebalancing from current holdings" control group** — an enable toggle reveals a **Max-Turnover
+  slider** (one-way cap), a **Trading Cost (bps)** input, and a **per-holding weight editor** built
+  from the current selection. Un-edited rows default to equal weight (so they sum to 100%); edited
+  rows are preserved; an **Equal-weight** button resets; the footer shows the running sum and flags
+  when it will be normalised. On run, the entries become `prevWeights` (normalised, aligned to the
+  optimisation's ticker order) and feed `optimise()`'s `turnoverBudget` + `txCostBps`.
+- **Turnover readout panel** (`renderer.drawTurnover`, `#turnover-card`, wired into `showResults`) —
+  shows one-way turnover, traded notional, and the proportional cost drag from `result.rebalance`,
+  with formulae. Optimiser metrics already reflect the turnover-blended weights (the blend happens
+  before metrics in the engine).
+- Turnover is applied to the **live run only** — never to the walk-forward OOS backtest (which
+  re-optimises each window from scratch, so prior holdings would distort it).
+- Verified live (local static preview): controls reveal, slider label tracks, the holdings editor
+  populates with clean equal-weight defaults summing to 100%, edit/Equal-weight/normalise-on-run all
+  behave, and the readout renders. Engine turnover math is covered by `test-turnover.mjs`.
 
 ### 2026-06-05
 - ✨ **engine** Ledoit-Wolf + EWMA covariance estimators (Group 1a) (`9c9cfa7`)

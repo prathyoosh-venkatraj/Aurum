@@ -194,6 +194,105 @@ function renderPortfolio() {
     });
     list.appendChild(div);
   });
+
+  // keep the turnover holdings editor in sync with the selection
+  if (rebalEnabled()) refreshHoldingsEditor();
+}
+
+// ── Rebalancing: current-holdings editor (turnover-aware) ───────────────────
+
+function rebalEnabled() {
+  return !!document.getElementById('rebal-enable')?.checked;
+}
+
+// Rebuild the per-holding weight inputs from the current selection. Preserves any
+// values already entered; new tickers default to equal weight across the selection.
+function refreshHoldingsEditor() {
+  const wrap = document.getElementById('rebal-holdings');
+  if (!wrap) return;
+  const tickers = state.selectedTickers;
+
+  if (tickers.length === 0) {
+    wrap.innerHTML = `<div class="rebal-holdings-empty">Add holdings to your portfolio first.</div>`;
+    updateHoldingsFoot();
+    return;
+  }
+
+  // prune stored state for tickers no longer selected
+  Object.keys(_holdWeights).forEach(t => { if (!tickers.includes(t)) delete _holdWeights[t]; });
+  [..._holdEdited].forEach(t => { if (!tickers.includes(t)) _holdEdited.delete(t); });
+
+  // Un-edited rows always show the current equal weight (1/N), so untouched
+  // holdings sum to 100%. Rows the user typed keep their entered value.
+  const eq = +(100 / tickers.length).toFixed(2);
+  tickers.forEach(t => { if (!_holdEdited.has(t)) _holdWeights[t] = eq; });
+
+  wrap.innerHTML = tickers.map(t => `
+      <div class="rebal-hold-row">
+        <span class="rebal-hold-tkr" title="${t}">${t}</span>
+        <input type="number" min="0" max="100" step="0.5" value="${_holdWeights[t]}" data-tkr="${t}" aria-label="${t} current weight %">
+        <span class="rebal-hold-pct">%</span>
+      </div>`).join('');
+
+  wrap.querySelectorAll('input[data-tkr]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const t = inp.dataset.tkr;
+      const v = parseFloat(inp.value);
+      _holdWeights[t] = isNaN(v) ? 0 : v;
+      _holdEdited.add(t);
+      updateHoldingsFoot();
+    });
+  });
+  updateHoldingsFoot();
+}
+
+function updateHoldingsFoot() {
+  const foot = document.getElementById('rebal-holdings-foot');
+  if (!foot) return;
+  const tickers = state.selectedTickers;
+  const sum = tickers.reduce((s, t) => s + (parseFloat(_holdWeights[t]) || 0), 0);
+  if (tickers.length === 0) { foot.textContent = ''; return; }
+  const off = Math.abs(sum - 100) > 0.5;
+  foot.textContent = `Sum: ${sum.toFixed(1)}%${off ? ' · normalised to 100% on run' : ''}`;
+  foot.classList.toggle('warn', off);
+}
+
+function initRebalControls() {
+  const enable = document.getElementById('rebal-enable');
+  const controls = document.getElementById('rebal-controls');
+  const slider = document.getElementById('turnover-budget');
+  const sliderVal = document.getElementById('turnover-val');
+  const equalize = document.getElementById('rebal-equalize');
+
+  if (enable && controls) {
+    enable.addEventListener('change', () => {
+      controls.style.display = enable.checked ? 'block' : 'none';
+      if (enable.checked) refreshHoldingsEditor();
+    });
+  }
+  if (slider && sliderVal) {
+    slider.addEventListener('input', () => { sliderVal.textContent = `${slider.value}%`; });
+  }
+  if (equalize) {
+    equalize.addEventListener('click', () => {
+      const tickers = state.selectedTickers;
+      if (!tickers.length) return;
+      const eq = +(100 / tickers.length).toFixed(2);
+      tickers.forEach(t => { _holdWeights[t] = eq; });
+      _holdEdited.clear();   // back to clean equal-weight defaults
+      refreshHoldingsEditor();
+    });
+  }
+}
+
+// Build prevWeights aligned to the optimisation's ticker order. Tickers absent
+// from the entered holdings (or dropped for insufficient history) get 0; the
+// vector is normalised to sum 1 over the aligned set. Returns null if no holdings.
+function buildPrevWeights(tickers) {
+  const raw = tickers.map(t => Math.max(0, parseFloat(_holdWeights[t]) || 0));
+  const sum = raw.reduce((s, x) => s + x, 0);
+  if (sum <= 1e-9) return null;
+  return raw.map(x => x / sum);
 }
 
 // ── Filter chips ───────────────────────────────────────────────────────────
@@ -457,6 +556,8 @@ let _lastCompareResults  = null;
 let _lastRunCtx          = null;   // inputs needed to recompute the walk-forward OOS backtest
 let _wfResult            = null;   // cached walk-forward result for the current run
 let _wfDelegated         = false;  // backtest-card toggle delegation attached once
+let _holdWeights         = {};     // ticker -> current-holding weight (%) for turnover rebalancing
+let _holdEdited          = new Set(); // tickers whose weight the user typed (vs. auto equal-weight)
 
 // ── Run optimisation ───────────────────────────────────────────────────────
 
@@ -612,6 +713,19 @@ async function runOptimisation() {
   };
   _wfResult = null;   // invalidate any prior run's OOS result
 
+  // Turnover-aware rebalancing (live run only — never applied to the walk-forward
+  // OOS backtest, which re-optimises each window from scratch). Blends the target
+  // toward the entered holdings to honour the Max-Turnover cap and reports the
+  // trading-cost drag.
+  if (rebalEnabled()) {
+    const prevWeights = buildPrevWeights(alignedData.tickers);
+    if (prevWeights) {
+      runOptions.prevWeights    = prevWeights;
+      runOptions.turnoverBudget = (parseFloat(document.getElementById('turnover-budget')?.value) || 100) / 100;
+      runOptions.txCostBps      = parseFloat(document.getElementById('tx-cost-bps')?.value) || 0;
+    }
+  }
+
   worker.postMessage({
     alignedReturns: alignedData.alignedReturns,
     tickers:        alignedData.tickers,
@@ -762,6 +876,7 @@ async function autoRunFromPortfolio() {
   initFilterChips();
   initModeRadios();
   initConstraintSliders();
+  initRebalControls();
   initViewsPanel();
   initSearch();
   initRunButton();

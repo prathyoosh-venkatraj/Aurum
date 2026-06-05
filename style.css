@@ -1213,6 +1213,101 @@ input { font-family: var(--font-mono); }
 }
 .factor-split-legend .bl-legend-item { font-size: 0.6rem; }
 
+/* ── Rebalancing: current-holdings editor ────────────────────────────────── */
+.rebal-holdings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 0 6px;
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted, #777);
+}
+.rebal-holdings {
+  max-height: 168px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.rebal-hold-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rebal-hold-row .rebal-hold-tkr {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--gold);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rebal-hold-row input[type="number"] {
+  width: 58px;
+  background: #11150f;
+  color: #e8ecdf;
+  border: 1px solid rgba(245,197,24,.25);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-align: right;
+}
+.rebal-hold-row .rebal-hold-pct {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--text-muted, #666);
+}
+.rebal-holdings-foot {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #777);
+}
+.rebal-holdings-foot.warn { color: var(--gold-dim, #b8902a); }
+.rebal-holdings-empty {
+  font-family: var(--font-display);
+  font-size: 0.66rem;
+  color: var(--text-muted, #666);
+  padding: 6px 0;
+}
+
+/* ── Turnover readout panel ──────────────────────────────────────────────── */
+.turnover-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+.turnover-stat {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 10px 12px;
+}
+.turnover-stat .ts-val {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+.turnover-stat .ts-lbl {
+  font-family: var(--font-display);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted, #777);
+  margin-top: 3px;
+}
+
 /* ── Heatmap hover tooltip ───────────────────────────────────────────────── */
 .heatmap-tooltip {
   position: fixed;

@@ -822,6 +822,50 @@ export function drawFactorRisk(result) {
     </div>`;
 }
 
+// ── Turnover-aware rebalancing readout ───────────────────────────────────────
+
+export function drawTurnover(result) {
+  const panel = document.getElementById('turnover-card');
+  if (!panel) return;
+
+  const rb = result.rebalance;
+  if (!rb) { panel.style.display = 'none'; return; }
+
+  panel.style.display = 'block';
+  const pct = (v, dp = 1) => (v * 100).toFixed(dp) + '%';
+
+  panel.innerHTML = `
+    <div class="panel-card-header">
+      Rebalancing from Current Holdings
+      <span class="panel-card-sub">one-way turnover, traded notional & the proportional trading-cost drag</span>
+    </div>
+    <div class="turnover-stats">
+      <div class="turnover-stat">
+        <div class="ts-val">${pct(rb.turnover)}</div>
+        <div class="ts-lbl">One-way turnover</div>
+      </div>
+      <div class="turnover-stat">
+        <div class="ts-val">${pct(rb.tradedNotional)}</div>
+        <div class="ts-lbl">Traded notional</div>
+      </div>
+      <div class="turnover-stat">
+        <div class="ts-val">${pct(rb.costDrag, 2)}</div>
+        <div class="ts-lbl">Cost drag @ ${rb.costBps} bps</div>
+      </div>
+    </div>
+    <div class="bl-legend">
+      <span class="bl-legend-item">
+        <span class="bl-legend-dot bl-legend-dot-gold"></span>
+        One-way turnover = ½·Σ|wₜₐᵣ𝓰ₑₜ − w𝒸ᵤᵣᵣₑₙₜ| — the fraction of the book that changes hands.
+        When it exceeds your Max-Turnover cap, the target is blended toward your holdings to honour it.
+      </span>
+      <span class="bl-legend-item">
+        <span class="bl-legend-dot bl-legend-dot-muted"></span>
+        Cost drag = traded notional × cost (bps) — the one-off implementation cost of moving to these weights.
+      </span>
+    </div>`;
+}
+
 // ── Backtest ───────────────────────────────────────────────────────────────
 
 function s(v, dp = 1) { return (v >= 0 ? '+' : '') + (v * 100).toFixed(dp) + '%'; }
@@ -1512,6 +1556,7 @@ export function showResults(result, btResult, mcResult, dates) {
   drawCorrelationInsights(result);
   drawBLPanel(result);
   drawFactorRisk(result);
+  drawTurnover(result);
   if (btResult && dates) drawBacktest(btResult, dates, result.optimal.return);
 }
 
@@ -1526,6 +1571,9 @@ export function hideResults() {
 
   const factorCard = document.getElementById('factor-card');
   if (factorCard) factorCard.style.display = 'none';
+
+  const turnoverCard = document.getElementById('turnover-card');
+  if (turnoverCard) turnoverCard.style.display = 'none';
 
   const poCard = document.getElementById('po-card');
   if (poCard) poCard.style.display = 'none';
