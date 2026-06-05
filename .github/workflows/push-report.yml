@@ -4,7 +4,7 @@ name: Push Report → Discord
 # type) to the NovaSect Discord #updates-and-implementation channel.
 #
 # Required secret:
-#   DISCORD_UPDATES_WEBHOOK_URL — webhook for #updates-and-implementation
+#   WEBSITE_UPDATES — Discord webhook URL for #updates-and-implementation
 # If the secret is unset the job still succeeds (prints the payload, posts nothing),
 # so this never blocks a deploy before the webhook is configured.
 
@@ -35,7 +35,7 @@ jobs:
           node-version: '22'
       - name: Post push summary
         env:
-          DISCORD_UPDATES_WEBHOOK_URL: ${{ secrets.DISCORD_UPDATES_WEBHOOK_URL }}
+          DISCORD_UPDATES_WEBHOOK_URL: ${{ secrets.WEBSITE_UPDATES }}
           RANGE: ${{ github.event.before }}..${{ github.event.after }}
           COMPARE_URL: ${{ github.event.compare }}
           REPO: ${{ github.repository }}
