@@ -145,20 +145,26 @@ function buildRebalTable(optResult, latestPrices, rebalValue) {
 // ── Mode comparison table ──────────────────────────────────────────────────
 
 function buildCompareTable(compareResults, activeMode) {
-  const MODES  = ['maxSharpe', 'minVariance', 'riskParity', 'blackLitterman'];
-  const LABELS = ['Max Sharpe', 'Min Variance', 'Risk Parity', 'Black-Litterman'];
+  // Self-describing columns: each result carries its `mode` (failures are tagged,
+  // not null), so this stays column-aligned with the on-screen panel for any set
+  // of optimiser modes without a parallel hardcoded list.
+  const LABELS = {
+    maxSharpe: 'Max Sharpe', minVariance: 'Min Variance', riskParity: 'Risk Parity',
+    blackLitterman: 'Black-Litterman', hrp: 'HRP', minCVaR: 'Min CVaR',
+    maxDiversification: 'Max Div',
+  };
+  const cols = (compareResults || []).filter(Boolean);
 
-  const headerCells = LABELS.map((l, i) => {
-    const active = MODES[i] === activeMode;
-    return `<th style="${active ? 'color:#7a5c00;font-weight:800;background:#fffae0;' : ''}">${l}</th>`;
+  const headerCells = cols.map(r => {
+    const active = r.mode === activeMode;
+    return `<th style="${active ? 'color:#7a5c00;font-weight:800;background:#fffae0;' : ''}">${LABELS[r.mode] || r.mode}</th>`;
   }).join('');
 
   function cmpRow(label, fn) {
-    const cells = MODES.map((k, i) => {
-      const r = compareResults?.[i];
-      const active = k === activeMode;
+    const cells = cols.map(r => {
+      const active = r.mode === activeMode;
       const style = active ? 'style="background:#fffdf0;font-weight:700;"' : '';
-      if (!r) return `<td ${style}>—</td>`;
+      if (!r || r.failed || !r.optimal) return `<td ${style}>—</td>`;
       return `<td ${style}>${fn(r)}</td>`;
     }).join('');
     return `<tr><td class="row-lbl">${label}</td>${cells}</tr>`;

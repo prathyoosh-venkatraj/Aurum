@@ -811,10 +811,13 @@ async function runCompare() {
   // Yield to browser so the button state renders before heavy computation
   await new Promise(r => setTimeout(r, 0));
 
-  const MODES = ['maxSharpe', 'minVariance', 'riskParity', 'blackLitterman'];
+  // All seven optimiser modes, compared side by side. Each entry is self-describing
+  // (carries its `mode`) so the on-screen panel and the PDF report stay column-aligned
+  // without parallel hardcoded lists. Failures become a tagged placeholder, not null.
+  const MODES = ['maxSharpe', 'minVariance', 'riskParity', 'blackLitterman', 'hrp', 'minCVaR', 'maxDiversification'];
   const results = MODES.map(mode => {
     try { return optimise(alignedData.alignedReturns, alignedData.tickers, rf, mode, opts); }
-    catch { return null; }
+    catch { return { mode, failed: true }; }
   });
 
   _lastCompareResults = results;

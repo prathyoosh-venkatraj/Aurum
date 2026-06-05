@@ -1540,8 +1540,10 @@ input { font-family: var(--font-mono); }
   line-height: 1;
 }
 .compare-close:hover { color: var(--gold); }
+.compare-table-wrap { overflow-x: auto; }
 .compare-table {
   width: 100%;
+  min-width: 640px;
   border-collapse: collapse;
   table-layout: fixed;
   font-family: var(--font-mono);
@@ -1562,7 +1564,7 @@ input { font-family: var(--font-mono); }
   color: var(--gold);
   border-bottom: 1px solid var(--gold);
 }
-.compare-table th:first-child { text-align: left; width: 28%; }
+.compare-table th:first-child { text-align: left; width: 120px; }
 .compare-table td {
   padding: 7px 10px;
   text-align: center;

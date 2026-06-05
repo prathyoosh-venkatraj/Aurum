@@ -1468,26 +1468,25 @@ export function drawComparePanel(modeResults, activeMode) {
   const card = document.getElementById('compare-card');
   if (!card) return;
 
-  const MODE_KEYS   = ['maxSharpe', 'minVariance', 'riskParity', 'blackLitterman'];
-  const MODE_LABELS = ['Max Sharpe', 'Min Variance', 'Risk Parity', 'Black-Litterman'];
+  // Columns are derived from the self-describing results (each carries its `mode`),
+  // so adding optimiser modes needs no parallel key/label arrays here.
+  const MODE_LABELS = {
+    maxSharpe: 'Max Sharpe', minVariance: 'Min Variance', riskParity: 'Risk Parity',
+    blackLitterman: 'Black-Litterman', hrp: 'HRP', minCVaR: 'Min CVaR',
+    maxDiversification: 'Max Div',
+  };
+  const cols = (modeResults || []).filter(Boolean);
 
-  const headerCells = MODE_KEYS.map((k, i) => {
-    const cls = k === activeMode ? ' class="cmp-active"' : '';
-    return `<th${cls}>${MODE_LABELS[i]}</th>`;
+  const headerCells = cols.map(r => {
+    const cls = r.mode === activeMode ? ' class="cmp-active"' : '';
+    return `<th${cls}>${MODE_LABELS[r.mode] || r.mode}</th>`;
   }).join('');
 
-  function cell(value, isActive, extraClass = '') {
-    const cls = ['cmp-active' && isActive ? 'cmp-active' : '', extraClass]
-      .filter(Boolean).join(' ');
-    return `<td${cls ? ` class="${cls}"` : ''}>${value}</td>`;
-  }
-
   function metricRow(label, fn) {
-    const cells = MODE_KEYS.map((k, i) => {
-      const r = modeResults[i];
-      const isActive = k === activeMode;
-      if (!r) return `<td class="${isActive ? 'cmp-active' : ''}">—</td>`;
-      return fn(r, isActive, k);
+    const cells = cols.map(r => {
+      const isActive = r.mode === activeMode;
+      if (!r || r.failed || !r.optimal) return `<td class="${isActive ? 'cmp-active' : ''}">—</td>`;
+      return fn(r, isActive, r.mode);
     }).join('');
     return `<tr><td>${label}</td>${cells}</tr>`;
   }
@@ -1530,10 +1529,12 @@ export function drawComparePanel(modeResults, activeMode) {
     <div class="compare-header">
       <span class="compare-title">Mode Comparison</span>
     </div>
-    <table class="compare-table">
-      <thead><tr><th></th>${headerCells}</tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <div class="compare-table-wrap">
+      <table class="compare-table">
+        <thead><tr><th></th>${headerCells}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
     <div class="compare-note">* Black-Litterman shown using CAPM market prior (no user views). Active mode column highlighted.</div>`;
 
   card.style.display = 'block';

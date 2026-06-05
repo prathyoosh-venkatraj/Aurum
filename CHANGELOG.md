@@ -150,6 +150,19 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
   populates with clean equal-weight defaults summing to 100%, edit/Equal-weight/normalise-on-run all
   behave, and the readout renders. Engine turnover math is covered by `test-turnover.mjs`.
 
+### Added — UI · Mode comparison across all seven optimisers (Group 5)
+- **"Mode Comparison" now compares all seven modes** — Max Sharpe, Min Variance, Risk Parity,
+  Black-Litterman, **HRP, Min CVaR, Max Diversification** (was four). Side-by-side annualised return,
+  volatility, Sharpe, max-drawdown, VaR 95% and top holdings — a single recruiter-legible view of how
+  the institutional methods differ on the same universe.
+- **Self-describing columns:** each compare result now carries its `mode` (failures are tagged, not
+  null), so `runCompare`, the on-screen `drawComparePanel`, and the **PDF report's** `buildCompareTable`
+  stay column-aligned from one source — no parallel hardcoded mode lists to drift. Added a horizontal
+  scroll wrapper for the wider table.
+- Verified live: 7 columns render in order with the active mode highlighted, a failed column degrades
+  to dashes, and metric values bind correctly (local static preview, real renderer module). The PDF
+  exporter uses the identical self-describing logic.
+
 ### 2026-06-05
 - ✨ **engine** Ledoit-Wolf + EWMA covariance estimators (Group 1a) (`9c9cfa7`)
 
