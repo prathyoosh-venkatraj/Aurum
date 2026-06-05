@@ -68,7 +68,8 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
 - `scripts/test-factor.mjs` — 12 assertions (eigensolver: Σλ=trace, orthonormality, VΛVᵀ
   reconstruction; factor model: exact decomposition, single-factor dominance, wiring). 116 engine
   assertions total.
-- _Follow-up:_ a UI factor-exposure panel (engine data is ready; render pending login verification).
+- _Follow-up (done):_ the UI factor-exposure panel now surfaces `result.factorRisk` — see
+  **UI · Factor-exposure panel** below.
 
 ### Added — Group 3b · Turnover-aware rebalancing & trading costs
 - **`optimise()` turnover support** — `prevWeights` (current holdings), `turnoverBudget` (one-way cap),
@@ -106,7 +107,14 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
 - **Env cleanup:** `AURUM_USER_ID` / `AURUM_PASSWORD` / `SESSION_SECRET` / `SESSION_VERSION` /
   `GROQ_API_KEY` are no longer used; set `REBUILD_SECRET` for manual rebuilds. `privacy.html` updated.
 
-## Historical (auto-generated from git log)
+### Added — UI · Factor-exposure panel (surfaces Group 3a)
+- **Factor Risk Decomposition panel** (`renderer.drawFactorRisk`, mounted at `#factor-card`,
+  wired into `showResults`) — renders the engine's `result.factorRisk` on **every run**: a
+  systematic-vs-specific risk split bar plus a per-factor table (PCₖ · variance explained ·
+  portfolio exposure/loading · risk share, top-5). Reuses the existing `.bl-panel`/`.bl-table`
+  styling; new `.factor-split*` CSS for the split bar. The PCA factor model (Group 3a) was
+  engine-only until now; this makes *where portfolio risk comes from* visible in the UI. No engine
+  change — verified end-to-end against the live render (local static preview, real module + CSS).
 
 ### 2026-06-05
 - ✨ **engine** Ledoit-Wolf + EWMA covariance estimators (Group 1a) (`9c9cfa7`)

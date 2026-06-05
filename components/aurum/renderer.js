@@ -753,6 +753,75 @@ export function drawBLPanel(result) {
     </div>`;
 }
 
+// ── Factor risk decomposition (PCA) ──────────────────────────────────────────
+
+export function drawFactorRisk(result) {
+  const panel = document.getElementById('factor-card');
+  if (!panel) return;
+
+  const fr = result.factorRisk;
+  if (!fr || !fr.factors || !fr.factors.length) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  panel.style.display = 'block';
+
+  const pct  = (v, dp = 1) => (v * 100).toFixed(dp) + '%';
+  const sysW = Math.max(0, Math.min(100, fr.systematicRiskPct * 100));
+
+  const rows = fr.factors.map(f => {
+    const expSign = f.exposure >= 0 ? '+' : '';
+    const hi = f.riskPct >= 0.20 ? 'bl-w-high' : '';
+    return `
+      <tr>
+        <td class="bl-ticker">${f.id}</td>
+        <td class="bl-num">${pct(f.varExplained)}</td>
+        <td class="bl-num">${expSign}${f.exposure.toFixed(3)}</td>
+        <td class="bl-num ${hi}">${pct(f.riskPct)}</td>
+      </tr>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div class="panel-card-header">
+      Factor Risk Decomposition
+      <span class="panel-card-sub">where your portfolio's risk comes from — PCA factors (systematic) vs idiosyncratic (specific)</span>
+    </div>
+    <div class="factor-split">
+      <div class="factor-split-bar" role="img"
+           aria-label="Systematic ${pct(fr.systematicRiskPct)}, specific ${pct(fr.specificRiskPct)}">
+        <div class="factor-seg-sys" style="width:${sysW.toFixed(1)}%"></div>
+      </div>
+      <div class="factor-split-legend">
+        <span class="bl-legend-item"><span class="bl-legend-dot bl-legend-dot-gold"></span>Systematic ${pct(fr.systematicRiskPct)}</span>
+        <span class="bl-legend-item"><span class="bl-legend-dot bl-legend-dot-muted"></span>Specific ${pct(fr.specificRiskPct)}</span>
+      </div>
+    </div>
+    <div class="bl-table-wrap">
+      <table class="bl-table">
+        <thead>
+          <tr>
+            <th class="bl-th-left">Factor</th>
+            <th class="bl-th-right">Var. Explained</th>
+            <th class="bl-th-right">Exposure</th>
+            <th class="bl-th-right">Risk Share</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="bl-legend">
+      <span class="bl-legend-item">
+        <span class="bl-legend-dot bl-legend-dot-gold"></span>
+        Factor (PCₖ) — kth principal component of the covariance matrix; an orthogonal "risk driver"
+      </span>
+      <span class="bl-legend-item">
+        <span class="bl-legend-dot bl-legend-dot-muted"></span>
+        Risk Share — (exposure²·λ) ⁄ portfolio variance; the top ${fr.nFactors} factors here = systematic risk
+      </span>
+    </div>`;
+}
+
 // ── Backtest ───────────────────────────────────────────────────────────────
 
 function s(v, dp = 1) { return (v >= 0 ? '+' : '') + (v * 100).toFixed(dp) + '%'; }
@@ -1428,6 +1497,7 @@ export function showResults(result, btResult, mcResult, dates) {
   drawHeatmap(result);
   drawCorrelationInsights(result);
   drawBLPanel(result);
+  drawFactorRisk(result);
   if (btResult && dates) drawBacktest(btResult, dates, result.optimal.return);
 }
 
@@ -1439,6 +1509,9 @@ export function hideResults() {
 
   const blPanel = document.getElementById('bl-panel');
   if (blPanel) blPanel.style.display = 'none';
+
+  const factorCard = document.getElementById('factor-card');
+  if (factorCard) factorCard.style.display = 'none';
 
   const poCard = document.getElementById('po-card');
   if (poCard) poCard.style.display = 'none';
