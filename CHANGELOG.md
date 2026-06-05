@@ -92,6 +92,20 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
 - _Note:_ exported + tested in the engine; bundles via the (deferred) UI walk-forward panel — the
   function is tree-shaken until the client imports it, like `computeBacktest`.
 
+### Changed / Removed — Public access (login removed)
+- **Removed the login** — deleted `login.html`, `api/auth.js`, the client verify/redirect gate, the
+  Logout links, and the HMAC user-session model (`_session.js` reduced to `safeCompare`). The
+  optimiser is client-side and the bundles/data are already public, so the gate protected nothing
+  confidential. Aurum is now an open, linkable showcase. See **ADR-0011** (supersedes ADR-0003).
+- **Removed the Groq `explain` endpoint** (`api/explain.js`) — the API key was deleted and it was
+  never wired into the UI (the non-AI Portfolio Overview already provides narrative). No Groq
+  remnants remain.
+- **Re-gated `/api/trigger-rebuild`** to an admin `Bearer REBUILD_SECRET` (constant-time), decoupled
+  from any user identity; removed the public "Refresh Weights" button (the weekly cron handles
+  refreshes). All login-independent hardening (CSP, SRI, IP rate limits, input validation) retained.
+- **Env cleanup:** `AURUM_USER_ID` / `AURUM_PASSWORD` / `SESSION_SECRET` / `SESSION_VERSION` /
+  `GROQ_API_KEY` are no longer used; set `REBUILD_SECRET` for manual rebuilds. `privacy.html` updated.
+
 ## Historical (auto-generated from git log)
 
 ### 2026-06-05

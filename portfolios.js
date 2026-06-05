@@ -497,35 +497,6 @@ function setPriceStatus(msg, type) {
   el.style.display = msg ? 'block' : 'none';
 }
 
-// ── Refresh weights ────────────────────────────────────────────────────────
-
-function showToast(msg, type = '') {
-  const el = document.getElementById('rebuild-toast');
-  el.textContent = msg;
-  el.className   = `rebuild-toast${type ? ' ' + type : ''} visible`;
-  clearTimeout(el._timer);
-  if (type !== 'loading') {
-    el._timer = setTimeout(() => { el.classList.remove('visible'); }, 6000);
-  }
-}
-
-async function triggerRebuild() {
-  const btn = document.getElementById('refresh-weights-btn');
-  btn.disabled = true;
-  showToast('Triggering portfolio rebuild…', 'loading');
-  try {
-    const res = await fetch('/api/trigger-rebuild', {
-      method: 'POST',
-      credentials: 'same-origin'
-    });
-    if (!res.ok) throw new Error(`Server error ${res.status}`);
-    showToast('Rebuild triggered. Weights will update in ~2 minutes — refresh the page then.', 'success');
-  } catch (err) {
-    showToast(`Failed to trigger rebuild: ${err.message}`, 'error');
-  } finally {
-    btn.disabled = false;
-  }
-}
 
 // ── UI wiring ──────────────────────────────────────────────────────────────
 
@@ -581,9 +552,6 @@ function setupUI() {
     searchQuery = e.target.value.trim();
     renderLibrary();
   });
-
-  // Refresh weights
-  document.getElementById('refresh-weights-btn').addEventListener('click', triggerRebuild);
 }
 
 // ── Start ──────────────────────────────────────────────────────────────────

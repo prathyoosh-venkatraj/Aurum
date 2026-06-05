@@ -120,15 +120,7 @@
     <p>Aurum (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) is a portfolio optimisation engine operated by NovaSect. This policy explains what data is collected when you use Aurum, by whom, and how it is used. Aurum does not sell data or run advertising.</p>
 
     <h2>Authentication</h2>
-    <p>Access to Aurum is protected by a login gate. Upon successful authentication, a session cookie (<code>aurum_sess</code>) is issued. This cookie is:</p>
-    <ul>
-      <li>Cryptographically signed (HMAC-SHA256) and verified server-side on each request</li>
-      <li>Flagged <code>HttpOnly</code> — inaccessible to JavaScript running in the browser</li>
-      <li>Flagged <code>Secure</code> — transmitted over HTTPS only</li>
-      <li>Flagged <code>SameSite=Strict</code> — not sent on cross-site requests</li>
-      <li>Valid for 7 days, after which re-authentication is required</li>
-    </ul>
-    <p>No personal data is stored within the cookie — it contains only a signed user identifier and issuance timestamp.</p>
+    <p>Aurum is openly accessible — there is no login, account, or authentication cookie. The optimiser runs entirely in your browser, and no user identity is collected or stored. (A single administrative action, refreshing the model-portfolio dataset, is protected by a server-side secret and is not exposed to visitors.)</p>
 
     <h2>Browser Storage</h2>
     <p>Aurum uses browser-local storage to preserve your session state across page reloads. No personal data is stored:</p>

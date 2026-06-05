@@ -1,7 +1,7 @@
 # Aurum
 
-**A login-gated, browser-based portfolio-optimization engine.** Pick equities from a curated
-~500-name global universe; Aurum runs institutional-style mean-variance optimization (and three
+**An open, browser-based portfolio-optimization engine.** Pick equities from a curated
+~500-name global universe; Aurum runs institutional-style mean-variance optimization (and six
 sibling strategies) entirely client-side and returns optimal weights, risk analytics, a backtest,
 a Monte-Carlo projection, a correlation map, and a printable PDF report.
 
@@ -40,13 +40,13 @@ a Monte-Carlo projection, a correlation map, and a printable PDF report.
 ## Stack
 
 Vanilla JS (ES modules) · a module **Web Worker** runs the linear algebra off the main thread ·
-Chart.js + Canvas · IndexedDB caching · Vercel (static + serverless proxies + HMAC session auth).
+Chart.js + Canvas · IndexedDB caching · Vercel (static + serverless proxies). No login — open access.
 Client is bundled/minified with esbuild.
 
 ```
 index.html / portfolios.html      ← pages
 aurum.js, portfolios.js, components/aurum/   ← client (engine.js is the pure quant lib) → *.min served
-api/                              ← auth + Yahoo/FRED proxies + rebuild trigger
+api/                              ← Yahoo/FRED proxies + (admin) rebuild trigger
 data/                             ← universe + pre-built portfolios (fetched at runtime)
 scripts/                          ← offline build/optimizer/tests (not served)
 ```
@@ -63,7 +63,7 @@ npm run build-portfolios # regenerate data/sample-portfolios.json (offline MVO)
 
 ## Notes
 
-Secrets (login, session, API keys, rebuild token) live in Vercel env (never in the repo). Raw
+Secrets (data-API keys, admin rebuild token) live in Vercel env (never in the repo). Raw
 client source, build tooling and docs are kept off the public site via `.vercelignore`.
 
 ---

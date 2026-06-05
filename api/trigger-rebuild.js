@@ -1,18 +1,20 @@
 /**
- * Aurum — Trigger Portfolio Rebuild
+ * Aurum — Trigger Portfolio Rebuild (admin-only)
  * Dispatches the rebuild-portfolios workflow via the GitHub API.
  *
- * Security:
- *   - Requires a valid aurum_sess session cookie (issued by /api/auth).
- *     Unauthenticated requests are rejected with 401.
- *   - Rate limit: 3 requests per minute per IP.
+ * The site is public (no user login — see ADR-0011), so this admin action is
+ * gated by a dedicated secret rather than a user session: callers must present
+ * `Authorization: Bearer <REBUILD_SECRET>`. The weekly cron dispatches the
+ * workflow directly via GitHub Actions and does not use this endpoint.
  *
  * Env vars required:
- *   SESSION_SECRET       — must match the value used in /api/auth
- *   GITHUB_REBUILD_TOKEN — GitHub PAT with workflow dispatch scope
+ *   REBUILD_SECRET        — admin token; compared in constant time
+ *   GITHUB_REBUILD_TOKEN  — GitHub PAT with workflow dispatch scope
+ *
+ * Rate limit: 3 requests per minute per IP.
  */
 
-import { verifySession } from './_session.js';
+import { safeCompare } from './_session.js';
 import { isRateLimited, getClientIp } from './_ratelimit.js';
 
 export default async function handler(req, res) {
@@ -20,12 +22,14 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // Verify session cookie — only authenticated users may trigger rebuilds.
-    const sessionSecret = process.env.SESSION_SECRET;
-    if (!sessionSecret) {
-        return res.status(500).json({ error: 'E500: SESSION_SECRET not configured on server' });
+    // Admin auth: Bearer REBUILD_SECRET (decoupled from any user login).
+    const secret = process.env.REBUILD_SECRET;
+    if (!secret) {
+        return res.status(500).json({ error: 'E500: REBUILD_SECRET not configured on server' });
     }
-    if (!verifySession(req.headers.cookie, sessionSecret)) {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!token || !safeCompare(token, secret)) {
         return res.status(401).json({ error: 'E401: UNAUTHORIZED' });
     }
 
@@ -36,8 +40,8 @@ export default async function handler(req, res) {
         return res.status(429).json({ error: 'E429: RATE_LIMIT_EXCEEDED' });
     }
 
-    const token = process.env.GITHUB_REBUILD_TOKEN;
-    if (!token) {
+    const ghToken = process.env.GITHUB_REBUILD_TOKEN;
+    if (!ghToken) {
         return res.status(500).json({ error: 'E500: GITHUB_REBUILD_TOKEN not configured on server' });
     }
 
@@ -46,7 +50,7 @@ export default async function handler(req, res) {
         {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${ghToken}`,
                 'Accept': 'application/vnd.github+json',
                 'X-GitHub-Api-Version': '2022-11-28',
                 'Content-Type': 'application/json',

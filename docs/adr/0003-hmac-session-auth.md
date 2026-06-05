@@ -1,6 +1,7 @@
 # ADR-0003 — HMAC session authentication (stateless gating)
 
-- **Status:** Accepted (retroactive record)
+- **Status:** Superseded by [ADR-0011](0011-remove-login-public-access.md) — the login was removed
+  and Aurum is now public (the user-session model no longer exists). Retained for history.
 - **Date:** 2026-05-29
 - **Scope:** Aurum · `api/auth.js`, `api/_session.js`, `api/_ratelimit.js`
 
