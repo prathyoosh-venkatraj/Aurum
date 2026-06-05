@@ -835,6 +835,54 @@ function solveHRP(Sigma) {
   return recursiveBisection(Sigma, order);
 }
 
+// ── Mean / Minimum-CVaR (Rockafellar-Uryasev) ───────────────────────────────
+
+/** Empirical 1-day CVaR_β: mean of the worst (1−β) portfolio returns (≤ 0). */
+function portfolioCVaR95(weights, returns, beta = 0.95) {
+  const T = returns.length;
+  const p = returns.map(r => r.reduce((s, x, i) => s + x * weights[i], 0));
+  p.sort((a, b) => a - b);                       // ascending → worst first
+  const k = Math.max(1, Math.floor((1 - beta) * T));
+  let s = 0; for (let i = 0; i < k; i++) s += p[i];
+  return s / k;
+}
+
+/**
+ * Minimum-CVaR portfolio via the Rockafellar-Uryasev objective, minimised by
+ * projected sub-gradient descent over historical scenarios (constraints enforced
+ * by projection each step). Minimises tail loss rather than variance — the
+ * post-2008 risk lens. Deterministic for given returns.
+ */
+function solveMinCVaR(returns, beta = 0.95, opts = {}) {
+  const { maxWeight = 1.0, sectorGroups = null, sectorCap = 1.0, iters = 1500 } = opts;
+  const T = returns.length, N = returns[0].length;
+  const denom = (1 - beta) * T;
+
+  const cvarOf = ww => {
+    const losses = returns.map(r => -r.reduce((s, x, i) => s + x * ww[i], 0));
+    const sorted = [...losses].sort((a, b) => a - b);
+    const alpha = sorted[Math.min(T - 1, Math.floor(beta * T))];   // VaR
+    let tail = 0, cnt = 0;
+    for (const L of losses) if (L >= alpha) { tail += L; cnt++; }
+    return cnt ? tail / cnt : alpha;
+  };
+
+  let w = projectConstrained(new Array(N).fill(1 / N), maxWeight, sectorGroups, sectorCap);
+  let best = cvarOf(w), lr = 1.0;
+  for (let it = 0; it < iters; it++) {
+    const losses = returns.map(r => -r.reduce((s, x, i) => s + x * w[i], 0));
+    const sorted = [...losses].sort((a, b) => a - b);
+    const alpha = sorted[Math.min(T - 1, Math.floor(beta * T))];
+    const g = new Array(N).fill(0);               // sub-gradient of R-U objective wrt w
+    for (let t = 0; t < T; t++) if (losses[t] > alpha) { const r = returns[t]; for (let i = 0; i < N; i++) g[i] += -r[i] / denom; }
+    const wNew = projectConstrained(w.map((x, i) => x - lr * g[i]), maxWeight, sectorGroups, sectorCap);
+    const cNew = cvarOf(wNew);
+    if (cNew < best - 1e-12) { w = wNew; best = cNew; lr *= 1.05; }
+    else { lr *= 0.5; if (lr < 1e-7) break; }
+  }
+  return w;
+}
+
 function covToCorr(Sigma) {
   const n = Sigma.length;
   const std = Sigma.map((row, i) => Math.sqrt(Math.max(0, row[i])));
@@ -898,17 +946,22 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const wHRP = mode === 'hrp'
     ? projectConstrained(solveHRP(Sigma), maxWeight, sectorGroups, sectorCap)
     : null;
+  // Group 2b — Minimum-CVaR (tail-risk) portfolio over historical scenarios.
+  const wMinCVaR = mode === 'minCVaR'
+    ? solveMinCVaR(alignedReturns, 0.95, { maxWeight, sectorGroups, sectorCap })
+    : null;
 
   // For BL mode the "optimal" is max-Sharpe on the posterior mu
   let optimal = mode === 'minVariance'  ? wMinVar
               : mode === 'riskParity'   ? wRiskParity
               : mode === 'hrp'          ? wHRP
+              : mode === 'minCVaR'      ? wMinCVaR
               : wMaxSharpe;
 
   // Group 1b — Michaud resampled (robust) weights for the active objective.
-  // Skipped for Black-Litterman and HRP (both already structurally robust).
+  // Skipped for Black-Litterman, HRP and Min-CVaR (already structurally robust).
   let resampleMeta = null;
-  if (resample && mode !== 'blackLitterman' && mode !== 'hrp') {
+  if (resample && mode !== 'blackLitterman' && mode !== 'hrp' && mode !== 'minCVaR') {
     const rw = resampleWeights(alignedReturns, mode, rf, { count: resampleCount, maxWeight, sectorGroups, sectorCap, covMethod });
     if (rw) { optimal = rw; resampleMeta = { enabled: true, count: resampleCount }; }
   }
@@ -920,6 +973,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const mrc   = marginalRiskContribution(optimal, Sigma);
   const mdd   = maxDrawdown(optimal, alignedReturns);
   const var95 = portfolioVaR95(ret, risk);
+  const cvar95 = portfolioCVaR95(optimal, alignedReturns);   // empirical 1-day CVaR (tail)
 
   const assets = tickers.map((ticker, i) => ({
     ticker,
@@ -936,7 +990,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
 
   return {
     tickers, mode, rf, mu, Sigma, correlation, frontier, covMeta, resample: resampleMeta,
-    optimal: { weights: optimal, return: ret, risk, sharpe: sr, maxDrawdown: mdd, var95, assets },
+    optimal: { weights: optimal, return: ret, risk, sharpe: sr, maxDrawdown: mdd, var95, cvar95, assets },
     anchors: {
       minVariance: { weights: wMinVar, return: mvRet, risk: mvRisk, sharpe: sharpeRatio(mvRet, mvRisk, rf) },
       maxSharpe:   { weights: wMaxSharpe, return: msRet, risk: msRisk, sharpe: sharpeRatio(msRet, msRisk, rf) }
@@ -950,6 +1004,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
 export {
   buildMoments, regularise, covToCorr,
   ledoitWolfCovariance, ewmaCovariance, estimateMoments, resampleWeights, solveHRP,
+  solveMinCVaR, portfolioCVaR95,
   projectToSimplex, projectToSimplexBounded, enforceSectorCaps,
   portfolioReturn, portfolioVariance, portfolioRisk, sharpeRatio,
   marginalRiskContribution, maxDrawdown, portfolioVaR95,

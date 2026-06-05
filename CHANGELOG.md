@@ -39,6 +39,16 @@ architectural decisions lives in [`docs/adr/`](docs/adr/).
   determinism, cap compliance, and greater diversification than max-Sharpe). 87 engine assertions
   total, all passing.
 
+### Added — Group 2b · Minimum-CVaR (tail-risk) optimization
+- **Min-CVaR optimizer** (`engine.solveMinCVaR`, mode `minCVaR`) — minimizes the conditional
+  value-at-risk (expected shortfall) of portfolio loss via the Rockafellar-Uryasev objective,
+  solved by projected sub-gradient over historical scenarios. Minimizes tail loss rather than
+  variance — the post-2008 risk lens. New "Minimum CVaR" optimisation-mode radio. See **ADR-0006**.
+- **Empirical CVaR metric** (`engine.portfolioCVaR95`) now computed for every result
+  (`optimal.cvar95`, 1-day historical expected shortfall).
+- `scripts/test-cvar.mjs` — 8 assertions (CVaR sign/monotonicity, validity/constraints, determinism,
+  and that min-CVaR achieves a shallower tail than min-variance). 95 engine assertions total.
+
 ## Historical (auto-generated from git log)
 
 ### 2026-06-05
