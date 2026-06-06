@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     }
 
     const response = await fetch(
-        'https://api.github.com/repos/F1nV4ult/Aurum/actions/workflows/rebuild-portfolios.yml/dispatches',
+        'https://api.github.com/repos/prathyoosh-venkatraj/Aurum/actions/workflows/rebuild-portfolios.yml/dispatches',
         {
             method: 'POST',
             headers: {
