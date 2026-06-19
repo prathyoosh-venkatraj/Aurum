@@ -207,6 +207,8 @@ async function showDetail(id) {
 
   document.getElementById('library-view').style.display = 'none';
   document.getElementById('detail-view').style.display  = 'block';
+  window.scrollTo(0, 0);   // always open the detail at the top (constituents first),
+                           // regardless of how far the library was scrolled
 
   // Populate header
   document.getElementById('detail-name').textContent    = portfolio.name;
