@@ -6,7 +6,7 @@
 
 import {
   state, on, emit,
-  addTicker, removeTicker,
+  addTicker, removeTicker, clearTickers,
   setFilter, setMode, setConstraint,
   addView, removeView, updateView,
   canRun, getFilteredTickers
@@ -31,21 +31,24 @@ async function loadUniverse() {
 const PORTFOLIO_KEY = 'aurum_portfolio_v1';
 const AUTORUN_KEY   = 'aurum_autorun_v1';
 
+// Selected tickers live in sessionStorage so they persist across reloads within
+// an open browsing session but are cleared once the browser/tab is closed — not
+// carried over into a fresh session.
 function savePortfolio() {
   try {
-    localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(state.selectedTickers));
+    sessionStorage.setItem(PORTFOLIO_KEY, JSON.stringify(state.selectedTickers));
   } catch { /* storage quota or private mode */ }
 }
 
 function restorePortfolio() {
   try {
-    const saved = localStorage.getItem(PORTFOLIO_KEY);
+    const saved = sessionStorage.getItem(PORTFOLIO_KEY);
     if (!saved) return;
     const tickers = JSON.parse(saved);
     if (!Array.isArray(tickers)) return;
     tickers.forEach(t => { if (state.universe[t]) state.selectedTickers.push(t); });
   } catch {
-    localStorage.removeItem(PORTFOLIO_KEY);
+    sessionStorage.removeItem(PORTFOLIO_KEY);
   }
 }
 
@@ -170,6 +173,9 @@ function renderPortfolio() {
   const list = document.getElementById('selected-list');
   const hint = document.getElementById('portfolio-empty-hint');
   if (!list) return;
+
+  const clearBtn = document.getElementById('clear-tickers-btn');
+  if (clearBtn) clearBtn.style.display = state.selectedTickers.length ? 'inline-block' : 'none';
 
   [...list.children].forEach(c => { if (c !== hint) c.remove(); });
 
@@ -886,6 +892,7 @@ async function autoRunFromPortfolio() {
   initViewsPanel();
   initSearch();
   initRunButton();
+  document.getElementById('clear-tickers-btn')?.addEventListener('click', () => clearTickers());
   subscribeStateEvents();
   renderPortfolio();
   updateRunButton();

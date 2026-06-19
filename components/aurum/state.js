@@ -52,6 +52,15 @@ export function removeTicker(ticker) {
   emit('viewsChanged', state.views);
 }
 
+// Remove every selected ticker at once (and any views that depend on them).
+export function clearTickers() {
+  if (state.selectedTickers.length === 0) return;
+  state.selectedTickers.length = 0;
+  state.views = [];
+  emit('portfolioChanged', state.selectedTickers);
+  emit('viewsChanged', state.views);
+}
+
 export function setFilter(type, value) {
   state.filters[type] = value;
   emit('filtersChanged', state.filters);

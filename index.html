@@ -89,7 +89,10 @@
 
     <!-- Selected portfolio -->
     <div class="panel-section" style="min-height:80px;">
-      <div class="section-label">Portfolio</div>
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Portfolio</span>
+        <button class="add-view-btn" id="clear-tickers-btn" type="button" style="display:none;">Clear all</button>
+      </div>
       <div id="selected-list" class="selected-list">
         <div class="empty-hint" id="portfolio-empty-hint">No positions added yet.</div>
       </div>
