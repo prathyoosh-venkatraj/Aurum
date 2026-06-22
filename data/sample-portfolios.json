@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-06-15",
+    "generated": "2026-06-22",
     "refresh_frequency": "weekly",
     "universe_version": "1.0.0",
     "universe_count": 500,
@@ -163,9 +163,9 @@
         }
       ],
       "stats": {
-        "expected_return": 0.1689,
-        "volatility": 0.1963,
-        "sharpe": 0.631,
+        "expected_return": 0.1547,
+        "volatility": 0.1981,
+        "sharpe": 0.554,
         "max_drawdown": -0.2,
         "beta": 1.37
       },
@@ -332,9 +332,9 @@
         }
       ],
       "stats": {
-        "expected_return": 0.0311,
-        "volatility": 0.1062,
-        "sharpe": -0.131,
+        "expected_return": 0.0359,
+        "volatility": 0.106,
+        "sharpe": -0.086,
         "max_drawdown": -0.087,
         "beta": 0.17
       },
@@ -501,11 +501,11 @@
         }
       ],
       "stats": {
-        "expected_return": 0.2307,
+        "expected_return": 0.2449,
         "volatility": 0.1054,
-        "sharpe": 1.762,
+        "sharpe": 1.898,
         "max_drawdown": -0.096,
-        "beta": 0.69
+        "beta": 0.68
       },
       "region_split": {
         "US": 0.89,
@@ -670,11 +670,11 @@
         }
       ],
       "stats": {
-        "expected_return": 0.239,
-        "volatility": 0.2839,
-        "sharpe": 0.683,
-        "max_drawdown": -0.293,
-        "beta": 1.82
+        "expected_return": 0.229,
+        "volatility": 0.2925,
+        "sharpe": 0.629,
+        "max_drawdown": -0.3,
+        "beta": 1.87
       },
       "region_split": {
         "US": 0.95,
@@ -839,11 +839,11 @@
         }
       ],
       "stats": {
-        "expected_return": 0.3565,
-        "volatility": 0.2328,
+        "expected_return": 0.3604,
+        "volatility": 0.2357,
         "sharpe": 1.338,
         "max_drawdown": -0.198,
-        "beta": 1.6
+        "beta": 1.61
       },
       "region_split": {
         "US": 0.91,
@@ -980,11 +980,11 @@
         }
       ],
       "stats": {
-        "expected_return": 0.1255,
-        "volatility": 0.1821,
-        "sharpe": 0.442,
-        "max_drawdown": -0.132,
-        "beta": 0.58
+        "expected_return": 0.1398,
+        "volatility": 0.1817,
+        "sharpe": 0.521,
+        "max_drawdown": -0.126,
+        "beta": 0.54
       },
       "region_split": {
         "US": 0.82,
@@ -1135,11 +1135,11 @@
         }
       ],
       "stats": {
-        "expected_return": 0.1418,
-        "volatility": 0.1174,
-        "sharpe": 0.824,
-        "max_drawdown": -0.061,
-        "beta": 0.29
+        "expected_return": 0.2104,
+        "volatility": 0.1219,
+        "sharpe": 1.357,
+        "max_drawdown": -0.057,
+        "beta": 0.15
       },
       "region_split": {
         "US": 0.97,
@@ -1290,11 +1290,11 @@
         }
       ],
       "stats": {
-        "expected_return": -0.0059,
-        "volatility": 0.1192,
-        "sharpe": -0.427,
-        "max_drawdown": -0.1,
-        "beta": 0.3
+        "expected_return": 0.0448,
+        "volatility": 0.1196,
+        "sharpe": -0.002,
+        "max_drawdown": -0.089,
+        "beta": 0.33
       },
       "region_split": {
         "US": 0.97,
@@ -1445,11 +1445,11 @@
         }
       ],
       "stats": {
-        "expected_return": 0.1437,
-        "volatility": 0.1161,
-        "sharpe": 0.85,
-        "max_drawdown": -0.067,
-        "beta": -0.04
+        "expected_return": 0.1617,
+        "volatility": 0.1105,
+        "sharpe": 1.057,
+        "max_drawdown": -0.068,
+        "beta": -0.09
       },
       "region_split": {
         "US": 0.97,
@@ -1600,11 +1600,11 @@
         }
       ],
       "stats": {
-        "expected_return": 0.1045,
-        "volatility": 0.1767,
-        "sharpe": 0.337,
-        "max_drawdown": -0.16,
-        "beta": 1.13
+        "expected_return": 0.3036,
+        "volatility": 0.187,
+        "sharpe": 1.383,
+        "max_drawdown": -0.126,
+        "beta": 1.12
       },
       "region_split": {
         "US": 0.14,
@@ -1755,9 +1755,9 @@
         }
       ],
       "stats": {
-        "expected_return": 0.1883,
-        "volatility": 0.1337,
-        "sharpe": 1.071,
+        "expected_return": 0.2041,
+        "volatility": 0.1352,
+        "sharpe": 1.176,
         "max_drawdown": -0.143,
         "beta": 0.96
       },
@@ -1910,11 +1910,11 @@
         }
       ],
       "stats": {
-        "expected_return": 0.1427,
-        "volatility": 0.1088,
-        "sharpe": 0.898,
-        "max_drawdown": -0.072,
-        "beta": 0.32
+        "expected_return": 0.1466,
+        "volatility": 0.1083,
+        "sharpe": 0.938,
+        "max_drawdown": -0.056,
+        "beta": 0.21
       },
       "region_split": {
         "US": 1,
