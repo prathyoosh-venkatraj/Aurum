@@ -628,6 +628,7 @@ async function runOptimisation() {
     console.warn(`${droppedViews.length} view(s) dropped — tickers not in aligned data:`, droppedViews.map(v => v.ticker));
   }
 
+  let optStartedAt = 0;
   worker.onmessage = (e) => {
     state.isRunning = false;
     updateRunButton();
@@ -662,6 +663,23 @@ async function runOptimisation() {
       statusMsg += ` · ${droppedViews.length} view(s) skipped (tickers unavailable)`;
     }
 
+    // Performance readout — wall-clock of the worker round-trip.
+    const elapsedMs = Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - optStartedAt);
+    if (optStartedAt && elapsedMs >= 0) statusMsg += ` · optimised in ${elapsedMs} ms`;
+
+    // Surface a non-FRED-10Y risk-free source (fallback / 1Y / last-known-good)
+    // so a degraded rate is visible rather than silently assumed.
+    let rfSource = null;
+    try { rfSource = sessionStorage.getItem('aurum_rf_source'); } catch { /* private mode */ }
+    if (rfSource && !/FRED 10Y/.test(rfSource)) statusMsg += ` · rf: ${rfSource}`;
+
+    // Surface engine warnings (duplicate tickers, zero-variance holding,
+    // infeasible cap) — count in the status line, detail in the console.
+    if (Array.isArray(optResult.warnings) && optResult.warnings.length) {
+      statusMsg += ` · ⚠ ${optResult.warnings.length} warning${optResult.warnings.length > 1 ? 's' : ''}`;
+      optResult.warnings.forEach(w => console.warn('[aurum]', w));
+    }
+
     setStatusOk(statusMsg);
 
     const btResult = computeBacktest(
@@ -689,6 +707,8 @@ async function runOptimisation() {
 
     const exportBtn = document.getElementById('export-btn');
     if (exportBtn) exportBtn.style.display = 'inline-block';
+    const csvBtn = document.getElementById('export-csv-btn');
+    if (csvBtn) csvBtn.style.display = 'inline-block';
   };
 
   worker.onerror = (err) => {
@@ -734,6 +754,7 @@ async function runOptimisation() {
     }
   }
 
+  optStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
   worker.postMessage({
     alignedReturns: alignedData.alignedReturns,
     tickers:        alignedData.tickers,
@@ -837,6 +858,37 @@ async function runCompare() {
 
 // ── Export ─────────────────────────────────────────────────────────────────
 
+// Daily backtest series → CSV for external analysis (Excel, pandas, etc.).
+// portNav/benchNav are NAV curves indexed to 1.0 with T+1 points (initial +
+// one per return day); alignedData.dates has the T return-day dates.
+function buildBacktestCsv(bt, dates) {
+  const pn = bt.portNav || [], bn = bt.benchNav || [], hasBench = !!bt.benchAvailable;
+  const header = hasBench
+    ? 'date,portfolio_nav,benchmark_nav,portfolio_daily_return,benchmark_daily_return'
+    : 'date,portfolio_nav,portfolio_daily_return';
+  const out = [header];
+  for (let t = 0; t < pn.length; t++) {
+    const date = t === 0 ? 'start' : (dates[t - 1] || '');
+    const pRet = t === 0 ? '' : (pn[t] / pn[t - 1] - 1).toFixed(6);
+    if (hasBench) {
+      const bRet = t === 0 ? '' : (bn[t] / bn[t - 1] - 1).toFixed(6);
+      out.push(`${date},${pn[t].toFixed(6)},${bn[t].toFixed(6)},${pRet},${bRet}`);
+    } else {
+      out.push(`${date},${pn[t].toFixed(6)},${pRet}`);
+    }
+  }
+  return out.join('\n');
+}
+
+function downloadCsv(filename, text) {
+  const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function initExportButton() {
   const btn = document.getElementById('export-btn');
   if (!btn) return;
@@ -853,6 +905,23 @@ function initExportButton() {
       rebalValue,
       benchSymbol: document.getElementById('benchmark-select')?.value || 'SPY',
     });
+  });
+
+  // CSV export — a sibling button created in JS (no HTML/layout change). Lets
+  // power users pull the daily NAV/return series for their own analysis.
+  let csvBtn = document.getElementById('export-csv-btn');
+  if (!csvBtn) {
+    csvBtn = document.createElement('button');
+    csvBtn.id = 'export-csv-btn';
+    csvBtn.className = btn.className;
+    csvBtn.textContent = 'Export CSV';
+    csvBtn.style.display = 'none';
+    csvBtn.style.marginLeft = '8px';
+    btn.insertAdjacentElement('afterend', csvBtn);
+  }
+  csvBtn.addEventListener('click', () => {
+    if (!_lastBtResult || !alignedData) return;
+    downloadCsv('aurum-backtest.csv', buildBacktestCsv(_lastBtResult, alignedData.dates));
   });
 }
 

@@ -963,22 +963,29 @@ function solveMinCVaR(returns, beta = 0.95, opts = {}) {
 // ── PCA factor risk model ───────────────────────────────────────────────────
 
 /**
- * Symmetric eigendecomposition via the cyclic Jacobi algorithm.
- * Returns eigenvalues (descending) and the matching eigenvectors (each an array
- * of length n). Robust and accurate for the small symmetric covariance matrices
- * used here (N ≤ ~45).
+ * Symmetric eigendecomposition via the cyclic Jacobi algorithm (Golub & Van Loan,
+ * "Matrix Computations", §8.4). Repeatedly applies Givens rotations that zero the
+ * largest off-diagonal pair, accumulating the rotations into V; on convergence the
+ * diagonal of `a` holds the eigenvalues and the columns of V the eigenvectors.
+ * Returns eigenvalues (descending) with matching eigenvectors. Robust and accurate
+ * for the small symmetric covariance matrices used here (N ≤ ~45); used by the PCA
+ * factor-risk model.
  */
 function jacobiEigen(M, maxSweeps = 100) {
   const n = M.length;
   const a = M.map(r => r.slice());
+  // V accumulates the product of all rotations → eigenvectors. Start at identity.
   const V = Array.from({ length: n }, (_, i) => { const e = new Array(n).fill(0); e[i] = 1; return e; });
   for (let sweep = 0; sweep < maxSweeps; sweep++) {
+    // Convergence test: sum of squared off-diagonals. Jacobi drives this to 0.
     let off = 0;
     for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) off += a[p][q] * a[p][q];
     if (off < 1e-20) break;
     for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) {
       const apq = a[p][q];
       if (Math.abs(apq) < 1e-15) continue;
+      // Rotation angle that annihilates a[p][q] (the numerically stable form:
+      // pick the smaller root of tan to avoid cancellation). c, s = cos, sin.
       const theta = (a[q][q] - a[p][p]) / (2 * apq);
       const t = theta === 0 ? 1 : Math.sign(theta) / (Math.abs(theta) + Math.sqrt(theta * theta + 1));
       const c = 1 / Math.sqrt(t * t + 1), s = t * c;
@@ -1099,6 +1106,66 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
     txCostBps     = 0          // proportional trading cost (basis points), for reporting
   } = options;
 
+  // ── Edge-case guards (degenerate inputs the UI layer can still hand us) ──────
+  const N = tickers.length;
+  if (N === 0) throw new Error('AURUM_EMPTY_PORTFOLIO: at least one asset is required');
+
+  const warnings = [];
+  if (new Set(tickers).size !== N) {
+    warnings.push('Duplicate tickers detected — each is treated as an independent row; results may be misleading.');
+  }
+
+  // Single-asset portfolio: every optimiser trivially allocates 100% to the one
+  // asset. Short-circuit so the (N≥2) iterative solvers and the PCA factor model
+  // — all of which assume a non-degenerate covariance — are never handed a 1×1
+  // problem (which yields NaNs from 0/0 risk normalisation).
+  if (N === 1) {
+    const { mu: mu1, Sigma: S1, covMeta: cm1 } = estimateMoments(alignedReturns, covMethod);
+    const w = [1];
+    const ret = portfolioReturn(w, mu1);
+    const risk = portfolioRisk(w, S1);
+    const sr = sharpeRatio(ret, risk, rf);
+    const leaf = { weights: w, return: ret, risk, sharpe: sr };
+    return {
+      tickers, mode, rf, mu: mu1, Sigma: S1, correlation: [[1]], frontier: [], covMeta: cm1,
+      resample: null, factorRisk: null, rebalance: null, warnings,
+      optimal: {
+        weights: w, return: ret, risk, sharpe: sr,
+        maxDrawdown: maxDrawdown(w, alignedReturns),
+        var95: portfolioVaR95(ret, risk),
+        cvar95: portfolioCVaR95(w, alignedReturns),
+        divRatio: 1,
+        assets: [{ ticker: tickers[0], weight: 1, annReturn: mu1[0], annRisk: Math.sqrt(Math.max(0, S1[0][0])), mrc: risk }],
+      },
+      anchors: { minVariance: { ...leaf }, maxSharpe: { ...leaf } },
+      bl: null, muMV: mu1,
+    };
+  }
+
+  // Degenerate-input signal: a holding whose returns barely vary makes the
+  // sample covariance near-singular. estimateMoments() already ridge-regularises
+  // (so the inversion-based solvers stay well-posed and never emit NaNs), but we
+  // still surface it — a flat series is usually a stale or illiquid feed the user
+  // will want to know about rather than silently optimise around.
+  const colVar = (j) => {
+    const T = alignedReturns.length;
+    let m = 0; for (const r of alignedReturns) m += r[j]; m /= T;
+    let v = 0; for (const r of alignedReturns) { const d = r[j] - m; v += d * d; }
+    return v / Math.max(1, T - 1);
+  };
+  for (let j = 0; j < N; j++) {
+    if (colVar(j) < 1e-12) {
+      warnings.push(`Holding "${tickers[j]}" has ~zero return variance (likely stale/illiquid) — covariance ridge-regularised for stability.`);
+    }
+  }
+
+  // Constraint feasibility: with a per-asset cap, weights can only sum to 1 if
+  // maxWeight·N ≥ 1. Below that, projectToSimplexBounded silently relaxes the cap
+  // to stay fully invested — warn so the user knows the cap isn't binding as set.
+  if (maxWeight < 1 && maxWeight * N < 1 - 1e-9) {
+    warnings.push(`Infeasible per-asset cap: ${(maxWeight * 100).toFixed(0)}% × ${N} assets < 100%; cap auto-relaxed to keep the portfolio fully invested.`);
+  }
+
   const { mu: muMV, Sigma, covMeta } = estimateMoments(alignedReturns, covMethod);
   const correlation = covToCorr(Sigma);
 
@@ -1190,7 +1257,7 @@ export function optimise(alignedReturns, tickers, rf, mode, options = {}) {
   const msRisk = portfolioRisk(wMaxSharpe, Sigma);
 
   return {
-    tickers, mode, rf, mu, Sigma, correlation, frontier, covMeta, resample: resampleMeta, factorRisk, rebalance,
+    tickers, mode, rf, mu, Sigma, correlation, frontier, covMeta, resample: resampleMeta, factorRisk, rebalance, warnings,
     optimal: { weights: optimal, return: ret, risk, sharpe: sr, maxDrawdown: mdd, var95, cvar95, divRatio, assets },
     anchors: {
       minVariance: { weights: wMinVar, return: mvRet, risk: mvRisk, sharpe: sharpeRatio(mvRet, mvRisk, rf) },

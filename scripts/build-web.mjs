@@ -13,6 +13,12 @@
  * No source maps — a public .map de-minifies the bundle back to source.
  */
 import { build } from 'esbuild';
+import { statSync, readFileSync } from 'node:fs';
+
+// --check: don't write. Rebuild each target in memory and compare to the
+// committed .min. Exits non-zero on any mismatch — wired into CI so a source
+// edit shipped without re-running the build (stale minified output) is caught.
+const CHECK = process.argv.includes('--check');
 
 const common = {
   bundle: true,
@@ -26,7 +32,6 @@ const common = {
 const fmt = (label, before, after) =>
   `${label.padEnd(34)} ${(before / 1024).toFixed(1)}KB → ${(after / 1024).toFixed(1)}KB`;
 
-const { statSync } = await import('node:fs');
 const size = (p) => { try { return statSync(p).size; } catch { return 0; } };
 
 const targets = [
@@ -35,15 +40,37 @@ const targets = [
   { entry: 'components/aurum/worker.js',  out: 'components/aurum/worker.min.js' },
 ];
 
-for (const t of targets) {
-  const before = size(t.entry);
-  await build({ ...common, entryPoints: [t.entry], outfile: t.out });
-  console.log(fmt(t.entry, before, size(t.out)));
+const mismatches = [];
+
+async function emit(opts, outPath, label) {
+  if (CHECK) {
+    const res = await build({ ...opts, outfile: outPath, write: false });
+    const built = res.outputFiles[0].text;
+    let committed = null;
+    try { committed = readFileSync(outPath, 'utf8'); } catch { /* missing */ }
+    if (committed === built) {
+      console.log('  ✓ ' + label);
+    } else {
+      mismatches.push(outPath);
+      console.error('  ✗ ' + label + ' — committed ' + outPath + (committed === null ? ' missing' : ' differs from source build'));
+    }
+  } else {
+    const before = size(opts.entryPoints[0]);
+    await build({ ...opts, outfile: outPath });
+    console.log(fmt(label, before, size(outPath)));
+  }
 }
 
-// CSS (minify only — no bundling needed).
-const cssBefore = size('style.css');
-await build({ entryPoints: ['style.css'], outfile: 'style.min.css', minify: true, sourcemap: false, loader: { '.css': 'css' } });
-console.log(fmt('style.css', cssBefore, size('style.min.css')));
+console.log(CHECK ? 'Verifying committed .min outputs match source…' : 'Building…');
+for (const t of targets) await emit({ ...common, entryPoints: [t.entry] }, t.out, t.entry);
+await emit({ entryPoints: ['style.css'], minify: true, sourcemap: false, loader: { '.css': 'css' } }, 'style.min.css', 'style.css');
 
-console.log('\n✓ Aurum web build complete.');
+if (CHECK) {
+  if (mismatches.length) {
+    console.error('\n✗ ' + mismatches.length + ' stale build artifact(s). Run `npm run build-web` and commit the .min files.');
+    process.exit(1);
+  }
+  console.log('\n✓ All committed .min outputs are in sync with source.');
+} else {
+  console.log('\n✓ Aurum web build complete.');
+}

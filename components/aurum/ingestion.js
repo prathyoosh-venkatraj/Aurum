@@ -275,30 +275,70 @@ export async function fetchBenchmarkReturns(dates, symbol = 'SPY') {
   return alignBenchmarkToDates(benchDates, benchPrices, dates);
 }
 
+const FALLBACK_RF = 0.045;          // last-resort constant (≈ long-run US 10Y)
+const RF_LKG_KEY  = 'aurum_rf_lkg'; // last-known-good rate, persisted across sessions
+
 /**
- * Fetch US 10Y Treasury yield from FRED proxy.
- * Cached in sessionStorage for 24h.
+ * Fetch the US risk-free rate from the FRED proxy.
+ *
+ * Resolution order (first that succeeds wins):
+ *   1. sessionStorage cache (< 24h old)   — fast path within a session
+ *   2. FRED 10Y (DGS10)                    — primary
+ *   3. FRED 1Y  (DGS1)                     — secondary when 10Y is unavailable
+ *   4. last-known-good in localStorage     — survives sessions; beats a guess
+ *   5. FALLBACK_RF (4.5%)                  — only if everything above fails
+ *
+ * Returns the rate as a decimal (e.g. 0.045). The chosen source is written to
+ * sessionStorage('aurum_rf_source') so the UI can label a fallback/proxy rate.
  */
 export async function fetchRiskFreeRate() {
   const cacheKey = 'aurum_rf_rate';
   const cached = sessionStorage.getItem(cacheKey);
   if (cached) {
-    const { value, fetchedAt } = JSON.parse(cached);
-    if (Date.now() - fetchedAt < CACHE_TTL) return value;
+    try {
+      const { value, fetchedAt } = JSON.parse(cached);
+      if (value != null && Date.now() - fetchedAt < CACHE_TTL) return value;
+    } catch { /* corrupt cache → re-fetch */ }
   }
 
-  let res;
-  try { res = await fetch('/api/fred-proxy?series_id=DGS10'); } catch { res = null; }
+  const setSource = (s) => { try { sessionStorage.setItem('aurum_rf_source', s); } catch { /* non-fatal */ } };
+  const tryFred = async (series) => {
+    try {
+      const res = await fetch(`/api/fred-proxy?series_id=${series}`);
+      if (!res || !res.ok) return null;
+      const data = await res.json();
+      const v = Number(data.value);
+      return (isFinite(v) && v > 0) ? v / 100 : null;
+    } catch { return null; }
+  };
 
-  if (!res || !res.ok) {
-    console.warn('Could not fetch risk-free rate from FRED; defaulting to 4.5%');
-    const fallback = 0.045;
-    // Cache the fallback for 1 hour so repeated runs don't re-hit a failing endpoint
-    sessionStorage.setItem(cacheKey, JSON.stringify({ value: fallback, fetchedAt: Date.now() - (CACHE_TTL - 3600000) }));
-    return fallback;
+  // 2 → 3: FRED 10Y, then the 1Y as a secondary anchor.
+  let value = await tryFred('DGS10'), source = 'FRED 10Y';
+  if (value == null) { value = await tryFred('DGS1'); source = 'FRED 1Y (10Y unavailable)'; }
+
+  if (value != null) {
+    const rec = JSON.stringify({ value, fetchedAt: Date.now() });
+    sessionStorage.setItem(cacheKey, rec);
+    try { localStorage.setItem(RF_LKG_KEY, rec); } catch { /* private mode → skip */ }
+    setSource(source);
+    return value;
   }
-  const data = await res.json();
-  const value = (data.value || 4.5) / 100;
-  sessionStorage.setItem(cacheKey, JSON.stringify({ value, fetchedAt: Date.now() }));
-  return value;
+
+  // 4: last-known-good (any age) is a better estimate than a hardcoded constant.
+  try {
+    const lkg = JSON.parse(localStorage.getItem(RF_LKG_KEY) || 'null');
+    if (lkg && lkg.value != null) {
+      const ageDays = Math.max(0, Math.round((Date.now() - lkg.fetchedAt) / 86400000));
+      console.warn(`FRED unavailable; using last-known-good risk-free rate ${(lkg.value * 100).toFixed(2)}% (${ageDays}d old).`);
+      sessionStorage.setItem(cacheKey, JSON.stringify({ value: lkg.value, fetchedAt: Date.now() - (CACHE_TTL - 3600000) }));
+      setSource(`last-known-good (${ageDays}d old)`);
+      return lkg.value;
+    }
+  } catch { /* ignore */ }
+
+  // 5: last resort.
+  console.warn(`FRED unavailable and no cached rate; defaulting to ${(FALLBACK_RF * 100).toFixed(1)}%.`);
+  sessionStorage.setItem(cacheKey, JSON.stringify({ value: FALLBACK_RF, fetchedAt: Date.now() - (CACHE_TTL - 3600000) }));
+  setSource(`fallback ${(FALLBACK_RF * 100).toFixed(1)}%`);
+  return FALLBACK_RF;
 }

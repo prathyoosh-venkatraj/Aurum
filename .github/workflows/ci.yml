@@ -21,9 +21,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Engine unit tests (deterministic, offline)
-        run: node scripts/test-engine.mjs
-      - name: Share-allocation tests (fixture-based, offline)
-        run: node scripts/test-allocation.mjs
-      - name: HTML-escape regression test (XSS helper)
-        run: node scripts/test-escape.mjs
+      - name: Install dependencies (exact-pinned esbuild, for the parity check)
+        run: npm install --no-audit --no-fund
+      - name: Unit + integration tests (deterministic, offline)
+        run: npm test
+      - name: Verify committed .min artifacts match source (no stale bundles)
+        run: npm run verify-build
