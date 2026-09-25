@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-09-24",
+    "generated": "2026-09-25",
     "refresh_frequency": "weekly",
     "universe_version": "1.0.0",
     "universe_count": 500,
@@ -22,102 +22,88 @@
       "min_recommended_tier": 5000,
       "tickers": [
         {
-          "ticker": "SCHW",
-          "name": "The Charles Schwab Corporation",
-          "sector": "Financials",
-          "region": "US",
-          "weight": 0.1278
-        },
-        {
           "ticker": "CB",
           "name": "Chubb Limited",
           "sector": "Financials",
           "region": "US",
-          "weight": 0.1278
+          "weight": 0.133
         },
         {
           "ticker": "JNJ",
           "name": "Johnson & Johnson",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1216
+          "weight": 0.1172
         },
         {
           "ticker": "ABBV",
           "name": "AbbVie Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1216
+          "weight": 0.1172
         },
         {
           "ticker": "MRK",
           "name": "Merck & Co. Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1216
+          "weight": 0.1172
         },
         {
           "ticker": "AAPL",
           "name": "Apple Inc.",
           "sector": "Information Technology",
           "region": "US",
-          "weight": 0.1142
+          "weight": 0.1164
         },
         {
-          "ticker": "005930.KS",
-          "name": "Samsung Electronics Co. Ltd.",
-          "sector": "Information Technology",
-          "region": "APAC",
-          "weight": 0.0774
+          "ticker": "ICE",
+          "name": "Intercontinental Exchange Inc.",
+          "sector": "Financials",
+          "region": "US",
+          "weight": 0.0918
         },
         {
           "ticker": "MU",
           "name": "Micron Technology Inc.",
           "sector": "Information Technology",
           "region": "US",
-          "weight": 0.076
+          "weight": 0.0864
+        },
+        {
+          "ticker": "005930.KS",
+          "name": "Samsung Electronics Co. Ltd.",
+          "sector": "Information Technology",
+          "region": "APAC",
+          "weight": 0.0806
         },
         {
           "ticker": "AMD",
           "name": "Advanced Micro Devices Inc.",
           "sector": "Information Technology",
           "region": "US",
-          "weight": 0.0463
+          "weight": 0.0546
         },
         {
           "ticker": "CRM",
           "name": "Salesforce Inc.",
           "sector": "Information Technology",
           "region": "US",
-          "weight": 0.0439
+          "weight": 0.0496
         },
         {
-          "ticker": "INTC",
-          "name": "Intel Corporation",
-          "sector": "Information Technology",
-          "region": "US",
-          "weight": 0.0144
-        },
-        {
-          "ticker": "UNH",
-          "name": "UnitedHealth Group Inc.",
+          "ticker": "TMO",
+          "name": "Thermo Fisher Scientific Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.0067
+          "weight": 0.0188
         },
         {
           "ticker": "LLY",
           "name": "Eli Lilly and Company",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.0006
-        },
-        {
-          "ticker": "GILD",
-          "name": "Gilead Sciences Inc.",
-          "sector": "Health Care",
-          "region": "US",
-          "weight": 0
+          "weight": 0.0171
         },
         {
           "ticker": "MSFT",
@@ -160,19 +146,33 @@
           "sector": "Information Technology",
           "region": "EU",
           "weight": 0
+        },
+        {
+          "ticker": "SAP",
+          "name": "SAP SE (ADR)",
+          "sector": "Information Technology",
+          "region": "EU",
+          "weight": 0
+        },
+        {
+          "ticker": "QCOM",
+          "name": "Qualcomm Inc.",
+          "sector": "Information Technology",
+          "region": "US",
+          "weight": 0
         }
       ],
       "stats": {
-        "expected_return": 0.5768,
-        "volatility": 0.131,
-        "sharpe": 4.058,
-        "max_drawdown": -0.262,
-        "beta": 0.73
+        "expected_return": 0.6047,
+        "volatility": 0.1331,
+        "sharpe": 4.206,
+        "max_drawdown": -0.266,
+        "beta": 0.74
       },
       "region_split": {
-        "US": 0.9226,
+        "US": 0.9194,
         "EU": 0,
-        "APAC": 0.0774,
+        "APAC": 0.0806,
         "EM": 0
       }
     },
@@ -195,133 +195,112 @@
           "name": "Johnson & Johnson",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1251
-        },
-        {
-          "ticker": "TTWO",
-          "name": "Take-Two Interactive Software Inc.",
-          "sector": "Communication Services",
-          "region": "US",
-          "weight": 0.1128
-        },
-        {
-          "ticker": "KO",
-          "name": "The Coca-Cola Company",
-          "sector": "Consumer Staples",
-          "region": "US",
-          "weight": 0.112
-        },
-        {
-          "ticker": "COST",
-          "name": "Costco Wholesale Corporation",
-          "sector": "Consumer Staples",
-          "region": "US",
-          "weight": 0.112
+          "weight": 0.1215
         },
         {
           "ticker": "TMO",
           "name": "Thermo Fisher Scientific Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.0914
+          "weight": 0.1209
         },
         {
-          "ticker": "VZ",
-          "name": "Verizon Communications Inc.",
-          "sector": "Communication Services",
+          "ticker": "KO",
+          "name": "The Coca-Cola Company",
+          "sector": "Consumer Staples",
           "region": "US",
-          "weight": 0.09
+          "weight": 0.1159
         },
         {
-          "ticker": "META",
-          "name": "Meta Platforms Inc.",
-          "sector": "Communication Services",
+          "ticker": "COST",
+          "name": "Costco Wholesale Corporation",
+          "sector": "Consumer Staples",
           "region": "US",
-          "weight": 0.0702
+          "weight": 0.1159
         },
         {
           "ticker": "NSRGY",
           "name": "Nestlé S.A. (OTC ADR)",
           "sector": "Consumer Staples",
           "region": "EU",
-          "weight": 0.0589
+          "weight": 0.1159
         },
         {
           "ticker": "PFE",
           "name": "Pfizer Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.0489
+          "weight": 0.0909
         },
         {
           "ticker": "UNH",
           "name": "UnitedHealth Group Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.0402
-        },
-        {
-          "ticker": "WMT",
-          "name": "Walmart Inc.",
-          "sector": "Consumer Staples",
-          "region": "US",
-          "weight": 0.0335
-        },
-        {
-          "ticker": "T",
-          "name": "AT&T Inc.",
-          "sector": "Communication Services",
-          "region": "US",
-          "weight": 0.029
-        },
-        {
-          "ticker": "KR",
-          "name": "The Kroger Co.",
-          "sector": "Consumer Staples",
-          "region": "US",
-          "weight": 0.0168
-        },
-        {
-          "ticker": "MO",
-          "name": "Altria Group Inc.",
-          "sector": "Consumer Staples",
-          "region": "US",
-          "weight": 0.0118
+          "weight": 0.0831
         },
         {
           "ticker": "BSX",
           "name": "Boston Scientific Corporation",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.0107
+          "weight": 0.0495
         },
         {
-          "ticker": "BUD",
-          "name": "Anheuser-Busch InBev SA/NV (ADR)",
+          "ticker": "MO",
+          "name": "Altria Group Inc.",
           "sector": "Consumer Staples",
-          "region": "EU",
-          "weight": 0.0104
+          "region": "US",
+          "weight": 0.0442
         },
         {
           "ticker": "PG",
           "name": "The Procter & Gamble Company",
           "sector": "Consumer Staples",
           "region": "US",
-          "weight": 0.0097
-        },
-        {
-          "ticker": "SPOT",
-          "name": "Spotify Technology S.A.",
-          "sector": "Communication Services",
-          "region": "EU",
-          "weight": 0.0091
+          "weight": 0.0373
         },
         {
           "ticker": "GILD",
           "name": "Gilead Sciences Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.0076
+          "weight": 0.0341
+        },
+        {
+          "ticker": "PEP",
+          "name": "PepsiCo Inc.",
+          "sector": "Consumer Staples",
+          "region": "US",
+          "weight": 0.0268
+        },
+        {
+          "ticker": "WMT",
+          "name": "Walmart Inc.",
+          "sector": "Consumer Staples",
+          "region": "US",
+          "weight": 0.0217
+        },
+        {
+          "ticker": "PM",
+          "name": "Philip Morris International Inc.",
+          "sector": "Consumer Staples",
+          "region": "US",
+          "weight": 0.0083
+        },
+        {
+          "ticker": "BTI",
+          "name": "British American Tobacco p.l.c. (ADR)",
+          "sector": "Consumer Staples",
+          "region": "EU",
+          "weight": 0.0073
+        },
+        {
+          "ticker": "BUD",
+          "name": "Anheuser-Busch InBev SA/NV (ADR)",
+          "sector": "Consumer Staples",
+          "region": "EU",
+          "weight": 0.0067
         },
         {
           "ticker": "LLY",
@@ -329,18 +308,39 @@
           "sector": "Health Care",
           "region": "US",
           "weight": 0
+        },
+        {
+          "ticker": "ABBV",
+          "name": "AbbVie Inc.",
+          "sector": "Health Care",
+          "region": "US",
+          "weight": 0
+        },
+        {
+          "ticker": "MRK",
+          "name": "Merck & Co. Inc.",
+          "sector": "Health Care",
+          "region": "US",
+          "weight": 0
+        },
+        {
+          "ticker": "ABT",
+          "name": "Abbott Laboratories",
+          "sector": "Health Care",
+          "region": "US",
+          "weight": 0
         }
       ],
       "stats": {
-        "expected_return": 0.1074,
-        "volatility": 0.1047,
-        "sharpe": 0.596,
-        "max_drawdown": -0.209,
-        "beta": 0.58
+        "expected_return": 0.1589,
+        "volatility": 0.1184,
+        "sharpe": 0.962,
+        "max_drawdown": -0.237,
+        "beta": 0.66
       },
       "region_split": {
-        "US": 0.9216,
-        "EU": 0.0784,
+        "US": 0.8701,
+        "EU": 0.1299,
         "APAC": 0,
         "EM": 0
       }
@@ -360,102 +360,88 @@
       "min_recommended_tier": 3000,
       "tickers": [
         {
-          "ticker": "SCHW",
-          "name": "The Charles Schwab Corporation",
-          "sector": "Financials",
-          "region": "US",
-          "weight": 0.1623
-        },
-        {
           "ticker": "CB",
           "name": "Chubb Limited",
           "sector": "Financials",
           "region": "US",
-          "weight": 0.1623
+          "weight": 0.1708
+        },
+        {
+          "ticker": "ICE",
+          "name": "Intercontinental Exchange Inc.",
+          "sector": "Financials",
+          "region": "US",
+          "weight": 0.1179
         },
         {
           "ticker": "JNJ",
           "name": "Johnson & Johnson",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1103
+          "weight": 0.1076
         },
         {
           "ticker": "ABBV",
           "name": "AbbVie Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1103
+          "weight": 0.1076
         },
         {
           "ticker": "MRK",
           "name": "Merck & Co. Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1103
+          "weight": 0.1076
         },
         {
           "ticker": "AAPL",
           "name": "Apple Inc.",
           "sector": "Information Technology",
           "region": "US",
-          "weight": 0.1036
-        },
-        {
-          "ticker": "005930.KS",
-          "name": "Samsung Electronics Co. Ltd.",
-          "sector": "Information Technology",
-          "region": "APAC",
-          "weight": 0.0702
+          "weight": 0.1068
         },
         {
           "ticker": "MU",
           "name": "Micron Technology Inc.",
           "sector": "Information Technology",
           "region": "US",
-          "weight": 0.069
+          "weight": 0.0793
+        },
+        {
+          "ticker": "005930.KS",
+          "name": "Samsung Electronics Co. Ltd.",
+          "sector": "Information Technology",
+          "region": "APAC",
+          "weight": 0.074
         },
         {
           "ticker": "AMD",
           "name": "Advanced Micro Devices Inc.",
           "sector": "Information Technology",
           "region": "US",
-          "weight": 0.042
+          "weight": 0.0501
         },
         {
           "ticker": "CRM",
           "name": "Salesforce Inc.",
           "sector": "Information Technology",
           "region": "US",
-          "weight": 0.0398
+          "weight": 0.0455
         },
         {
-          "ticker": "INTC",
-          "name": "Intel Corporation",
-          "sector": "Information Technology",
-          "region": "US",
-          "weight": 0.0131
-        },
-        {
-          "ticker": "UNH",
-          "name": "UnitedHealth Group Inc.",
+          "ticker": "TMO",
+          "name": "Thermo Fisher Scientific Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.0061
+          "weight": 0.0173
         },
         {
           "ticker": "LLY",
           "name": "Eli Lilly and Company",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.0005
-        },
-        {
-          "ticker": "GILD",
-          "name": "Gilead Sciences Inc.",
-          "sector": "Health Care",
-          "region": "US",
-          "weight": 0
+          "weight": 0.0157
         },
         {
           "ticker": "MSFT",
@@ -498,19 +484,33 @@
           "sector": "Information Technology",
           "region": "EU",
           "weight": 0
+        },
+        {
+          "ticker": "SAP",
+          "name": "SAP SE (ADR)",
+          "sector": "Information Technology",
+          "region": "EU",
+          "weight": 0
+        },
+        {
+          "ticker": "QCOM",
+          "name": "Qualcomm Inc.",
+          "sector": "Information Technology",
+          "region": "US",
+          "weight": 0
         }
       ],
       "stats": {
-        "expected_return": 0.5407,
-        "volatility": 0.1224,
-        "sharpe": 4.051,
-        "max_drawdown": -0.245,
+        "expected_return": 0.5631,
+        "volatility": 0.1228,
+        "sharpe": 4.219,
+        "max_drawdown": -0.246,
         "beta": 0.68
       },
       "region_split": {
-        "US": 0.9298,
+        "US": 0.926,
         "EU": 0,
-        "APAC": 0.0702,
+        "APAC": 0.074,
         "EM": 0
       }
     },
@@ -536,15 +536,15 @@
           "weight": 0.4167
         },
         {
-          "ticker": "C",
-          "name": "Citigroup Inc.",
+          "ticker": "BAC",
+          "name": "Bank of America Corporation",
           "sector": "Financials",
           "region": "US",
           "weight": 0.1944
         },
         {
-          "ticker": "SCHW",
-          "name": "The Charles Schwab Corporation",
+          "ticker": "C",
+          "name": "Citigroup Inc.",
           "sector": "Financials",
           "region": "US",
           "weight": 0.1944
@@ -585,13 +585,6 @@
           "weight": 0
         },
         {
-          "ticker": "BAC",
-          "name": "Bank of America Corporation",
-          "sector": "Financials",
-          "region": "US",
-          "weight": 0
-        },
-        {
           "ticker": "WFC",
           "name": "Wells Fargo & Company",
           "sector": "Financials",
@@ -599,19 +592,19 @@
           "weight": 0
         },
         {
-          "ticker": "DB",
-          "name": "Deutsche Bank AG (ADR)",
+          "ticker": "SCHW",
+          "name": "The Charles Schwab Corporation",
           "sector": "Financials",
-          "region": "EU",
+          "region": "US",
           "weight": 0
         }
       ],
       "stats": {
-        "expected_return": 0.7062,
-        "volatility": 0.3584,
-        "sharpe": 1.845,
-        "max_drawdown": -0.717,
-        "beta": 1.99
+        "expected_return": 0.7138,
+        "volatility": 0.371,
+        "sharpe": 1.802,
+        "max_drawdown": -0.742,
+        "beta": 2.06
       },
       "region_split": {
         "US": 0.8056,
