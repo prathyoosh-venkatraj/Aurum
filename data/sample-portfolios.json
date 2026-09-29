@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-09-28",
+    "generated": "2026-09-29",
     "refresh_frequency": "weekly",
     "universe_version": "1.0.0",
     "universe_count": 500,
@@ -632,84 +632,63 @@
           "name": "Apple Inc.",
           "sector": "Information Technology",
           "region": "US",
-          "weight": 0.1507
-        },
-        {
-          "ticker": "005930.KS",
-          "name": "Samsung Electronics Co. Ltd.",
-          "sector": "Information Technology",
-          "region": "APAC",
-          "weight": 0.1334
+          "weight": 0.1451
         },
         {
           "ticker": "MU",
           "name": "Micron Technology Inc.",
           "sector": "Information Technology",
           "region": "US",
-          "weight": 0.1295
+          "weight": 0.1451
+        },
+        {
+          "ticker": "005930.KS",
+          "name": "Samsung Electronics Co. Ltd.",
+          "sector": "Information Technology",
+          "region": "APAC",
+          "weight": 0.1326
         },
         {
           "ticker": "VZ",
           "name": "Verizon Communications Inc.",
           "sector": "Communication Services",
           "region": "US",
-          "weight": 0.0998
+          "weight": 0.1024
         },
         {
           "ticker": "WBD",
           "name": "Warner Bros. Discovery Inc.",
           "sector": "Communication Services",
           "region": "US",
-          "weight": 0.0998
-        },
-        {
-          "ticker": "KDDIY",
-          "name": "KDDI Corporation (ADR)",
-          "sector": "Communication Services",
-          "region": "APAC",
-          "weight": 0.0998
+          "weight": 0.1024
         },
         {
           "ticker": "VOD",
           "name": "Vodafone Group Plc (ADR)",
           "sector": "Communication Services",
           "region": "EU",
-          "weight": 0.0998
+          "weight": 0.1024
         },
         {
           "ticker": "PUBGY",
           "name": "Publicis Groupe SA (ADR)",
           "sector": "Communication Services",
           "region": "EU",
-          "weight": 0.0922
-        },
-        {
-          "ticker": "AMD",
-          "name": "Advanced Micro Devices Inc.",
-          "sector": "Information Technology",
-          "region": "US",
-          "weight": 0.0679
-        },
-        {
-          "ticker": "INTC",
-          "name": "Intel Corporation",
-          "sector": "Information Technology",
-          "region": "US",
-          "weight": 0.0126
+          "weight": 0.1024
         },
         {
           "ticker": "GOOGL",
           "name": "Alphabet Inc. Class A",
           "sector": "Communication Services",
           "region": "US",
-          "weight": 0.0086
+          "weight": 0.0903
         },
         {
-          "ticker": "NOK",
-          "name": "Nokia Corporation (ADR)",
+          "ticker": "AMD",
+          "name": "Advanced Micro Devices Inc.",
           "sector": "Information Technology",
-          "region": "EU",
-          "weight": 0.0059
+          "region": "US",
+          "weight": 0.0772
         },
         {
           "ticker": "MSFT",
@@ -766,19 +745,40 @@
           "sector": "Information Technology",
           "region": "US",
           "weight": 0
+        },
+        {
+          "ticker": "QCOM",
+          "name": "Qualcomm Inc.",
+          "sector": "Information Technology",
+          "region": "US",
+          "weight": 0
+        },
+        {
+          "ticker": "TXN",
+          "name": "Texas Instruments Inc.",
+          "sector": "Information Technology",
+          "region": "US",
+          "weight": 0
+        },
+        {
+          "ticker": "ACN",
+          "name": "Accenture plc",
+          "sector": "Information Technology",
+          "region": "US",
+          "weight": 0
         }
       ],
       "stats": {
-        "expected_return": 0.7494,
-        "volatility": 0.2133,
-        "sharpe": 3.303,
-        "max_drawdown": -0.427,
-        "beta": 1.18
+        "expected_return": 0.7841,
+        "volatility": 0.2307,
+        "sharpe": 3.203,
+        "max_drawdown": -0.461,
+        "beta": 1.28
       },
       "region_split": {
-        "US": 0.5688,
-        "EU": 0.198,
-        "APAC": 0.2332,
+        "US": 0.6625,
+        "EU": 0.2049,
+        "APAC": 0.1326,
         "EM": 0
       }
     },
@@ -801,49 +801,56 @@
           "name": "Johnson & Johnson",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1429
+          "weight": 0.125
         },
         {
           "ticker": "MRK",
           "name": "Merck & Co. Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1429
+          "weight": 0.125
         },
         {
           "ticker": "TMO",
           "name": "Thermo Fisher Scientific Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1429
+          "weight": 0.125
+        },
+        {
+          "ticker": "AMGN",
+          "name": "Amgen Inc.",
+          "sector": "Health Care",
+          "region": "US",
+          "weight": 0.125
         },
         {
           "ticker": "GILD",
           "name": "Gilead Sciences Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1429
+          "weight": 0.125
         },
         {
           "ticker": "BAYRY",
           "name": "Bayer AG (ADR)",
           "sector": "Health Care",
           "region": "EU",
-          "weight": 0.1429
+          "weight": 0.125
         },
         {
           "ticker": "CVS",
           "name": "CVS Health Corporation",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1429
+          "weight": 0.125
         },
         {
-          "ticker": "BIIB",
-          "name": "Biogen Inc.",
+          "ticker": "IQV",
+          "name": "IQVIA Holdings Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.1429
+          "weight": 0.125
         },
         {
           "ticker": "UNH",
@@ -881,13 +888,6 @@
           "weight": 0
         },
         {
-          "ticker": "AMGN",
-          "name": "Amgen Inc.",
-          "sector": "Health Care",
-          "region": "US",
-          "weight": 0
-        },
-        {
           "ticker": "SYK",
           "name": "Stryker Corporation",
           "sector": "Health Care",
@@ -916,13 +916,6 @@
           "weight": 0
         },
         {
-          "ticker": "AZN",
-          "name": "AstraZeneca PLC (ADR)",
-          "sector": "Health Care",
-          "region": "EU",
-          "weight": 0
-        },
-        {
           "ticker": "SNY",
           "name": "Sanofi S.A. (ADR)",
           "sector": "Health Care",
@@ -930,23 +923,30 @@
           "weight": 0
         },
         {
-          "ticker": "GSK",
-          "name": "GSK plc (ADR)",
+          "ticker": "NVS",
+          "name": "Novartis AG (ADR)",
+          "sector": "Health Care",
+          "region": "EU",
+          "weight": 0
+        },
+        {
+          "ticker": "RHHBY",
+          "name": "Roche Holding AG (ADR)",
           "sector": "Health Care",
           "region": "EU",
           "weight": 0
         }
       ],
       "stats": {
-        "expected_return": 0.4235,
-        "volatility": 0.1766,
-        "sharpe": 2.144,
-        "max_drawdown": -0.353,
+        "expected_return": 0.4321,
+        "volatility": 0.1771,
+        "sharpe": 2.186,
+        "max_drawdown": -0.354,
         "beta": 0.98
       },
       "region_split": {
-        "US": 0.8571,
-        "EU": 0.1429,
+        "US": 0.875,
+        "EU": 0.125,
         "APAC": 0,
         "EM": 0
       }
