@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-10-06",
+    "generated": "2026-10-07",
     "refresh_frequency": "weekly",
     "universe_version": "1.0.0",
     "universe_count": 500,
@@ -1210,119 +1210,133 @@
           "name": "The Coca-Cola Company",
           "sector": "Consumer Staples",
           "region": "US",
-          "weight": 0.1187
+          "weight": 0.1295
         },
         {
           "ticker": "BRK-B",
           "name": "Berkshire Hathaway Inc. Class B",
           "sector": "Financials",
           "region": "US",
-          "weight": 0.1001
+          "weight": 0.1031
         },
         {
           "ticker": "TD",
           "name": "Toronto-Dominion Bank",
           "sector": "Financials",
           "region": "US",
-          "weight": 0.1001
+          "weight": 0.1031
         },
         {
           "ticker": "COST",
           "name": "Costco Wholesale Corporation",
           "sector": "Consumer Staples",
           "region": "US",
-          "weight": 0.0966
+          "weight": 0.0889
         },
         {
           "ticker": "CB",
           "name": "Chubb Limited",
           "sector": "Financials",
           "region": "US",
-          "weight": 0.0858
-        },
-        {
-          "ticker": "NSRGY",
-          "name": "Nestlé S.A. (OTC ADR)",
-          "sector": "Consumer Staples",
-          "region": "EU",
-          "weight": 0.0706
-        },
-        {
-          "ticker": "TMO",
-          "name": "Thermo Fisher Scientific Inc.",
-          "sector": "Health Care",
-          "region": "US",
-          "weight": 0.0589
+          "weight": 0.0818
         },
         {
           "ticker": "JNJ",
           "name": "Johnson & Johnson",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.058
+          "weight": 0.0621
+        },
+        {
+          "ticker": "TMO",
+          "name": "Thermo Fisher Scientific Inc.",
+          "sector": "Health Care",
+          "region": "US",
+          "weight": 0.0612
+        },
+        {
+          "ticker": "NSRGY",
+          "name": "Nestlé S.A. (OTC ADR)",
+          "sector": "Consumer Staples",
+          "region": "EU",
+          "weight": 0.0519
         },
         {
           "ticker": "MO",
           "name": "Altria Group Inc.",
           "sector": "Consumer Staples",
           "region": "US",
-          "weight": 0.0579
-        },
-        {
-          "ticker": "MS",
-          "name": "Morgan Stanley",
-          "sector": "Financials",
-          "region": "US",
-          "weight": 0.0564
+          "weight": 0.0504
         },
         {
           "ticker": "KR",
           "name": "The Kroger Co.",
           "sector": "Consumer Staples",
           "region": "US",
-          "weight": 0.0485
+          "weight": 0.0471
         },
         {
-          "ticker": "BSX",
-          "name": "Boston Scientific Corporation",
-          "sector": "Health Care",
+          "ticker": "MS",
+          "name": "Morgan Stanley",
+          "sector": "Financials",
           "region": "US",
-          "weight": 0.0355
+          "weight": 0.0455
         },
         {
           "ticker": "GS",
           "name": "The Goldman Sachs Group Inc.",
           "sector": "Financials",
           "region": "US",
-          "weight": 0.0324
-        },
-        {
-          "ticker": "UBS",
-          "name": "UBS Group AG",
-          "sector": "Financials",
-          "region": "EU",
-          "weight": 0.0301
+          "weight": 0.0363
         },
         {
           "ticker": "PFE",
           "name": "Pfizer Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.0256
+          "weight": 0.032
+        },
+        {
+          "ticker": "BSX",
+          "name": "Boston Scientific Corporation",
+          "sector": "Health Care",
+          "region": "US",
+          "weight": 0.0317
+        },
+        {
+          "ticker": "UBS",
+          "name": "UBS Group AG",
+          "sector": "Financials",
+          "region": "EU",
+          "weight": 0.0213
+        },
+        {
+          "ticker": "META",
+          "name": "Meta Platforms Inc.",
+          "sector": "Communication Services",
+          "region": "US",
+          "weight": 0.0202
+        },
+        {
+          "ticker": "GOOGL",
+          "name": "Alphabet Inc. Class A",
+          "sector": "Communication Services",
+          "region": "US",
+          "weight": 0.0186
         },
         {
           "ticker": "GILD",
           "name": "Gilead Sciences Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.0147
+          "weight": 0.009
         },
         {
           "ticker": "UNH",
           "name": "UnitedHealth Group Inc.",
           "sector": "Health Care",
           "region": "US",
-          "weight": 0.0102
+          "weight": 0.0064
         },
         {
           "ticker": "LLY",
@@ -1330,32 +1344,18 @@
           "sector": "Health Care",
           "region": "US",
           "weight": 0
-        },
-        {
-          "ticker": "ABBV",
-          "name": "AbbVie Inc.",
-          "sector": "Health Care",
-          "region": "US",
-          "weight": 0
-        },
-        {
-          "ticker": "MRK",
-          "name": "Merck & Co. Inc.",
-          "sector": "Health Care",
-          "region": "US",
-          "weight": 0
         }
       ],
       "stats": {
-        "expected_return": 0.1459,
-        "volatility": 0.0904,
-        "sharpe": 1.116,
-        "max_drawdown": -0.181,
+        "expected_return": 0.133,
+        "volatility": 0.0898,
+        "sharpe": 0.979,
+        "max_drawdown": -0.18,
         "beta": 0.5
       },
       "region_split": {
-        "US": 0.8992,
-        "EU": 0.1008,
+        "US": 0.9268,
+        "EU": 0.0732,
         "APAC": 0,
         "EM": 0
       }
@@ -1379,111 +1379,90 @@
           "name": "Iberdrola S.A.",
           "sector": "Utilities",
           "region": "EU",
-          "weight": 0.1207
-        },
-        {
-          "ticker": "E",
-          "name": "Eni S.p.A. (ADR)",
-          "sector": "Energy",
-          "region": "EU",
-          "weight": 0.1188
-        },
-        {
-          "ticker": "REP.MC",
-          "name": "Repsol S.A.",
-          "sector": "Energy",
-          "region": "EU",
-          "weight": 0.1188
-        },
-        {
-          "ticker": "BUD",
-          "name": "Anheuser-Busch InBev SA/NV (ADR)",
-          "sector": "Consumer Staples",
-          "region": "EU",
-          "weight": 0.1004
-        },
-        {
-          "ticker": "2222.SR",
-          "name": "Saudi Arabian Oil Co. (Aramco)",
-          "sector": "Energy",
-          "region": "EM",
-          "weight": 0.0978
+          "weight": 0.1231
         },
         {
           "ticker": "VOLV-B.ST",
           "name": "Volvo AB Class B",
           "sector": "Industrials",
           "region": "EU",
-          "weight": 0.0959
+          "weight": 0.1231
         },
         {
-          "ticker": "GSK",
-          "name": "GSK plc (ADR)",
-          "sector": "Health Care",
+          "ticker": "REP.MC",
+          "name": "Repsol S.A.",
+          "sector": "Energy",
           "region": "EU",
-          "weight": 0.085
+          "weight": 0.115
         },
         {
-          "ticker": "005930.KS",
-          "name": "Samsung Electronics Co. Ltd.",
-          "sector": "Information Technology",
-          "region": "APAC",
-          "weight": 0.0717
-        },
-        {
-          "ticker": "RHHBY",
-          "name": "Roche Holding AG (ADR)",
-          "sector": "Health Care",
-          "region": "EU",
-          "weight": 0.0626
-        },
-        {
-          "ticker": "TSM",
-          "name": "Taiwan Semiconductor Mfg. (ADR)",
-          "sector": "Information Technology",
-          "region": "APAC",
-          "weight": 0.035
-        },
-        {
-          "ticker": "UBS",
-          "name": "UBS Group AG",
-          "sector": "Financials",
-          "region": "EU",
-          "weight": 0.0291
+          "ticker": "PBR",
+          "name": "Petróleo Brasileiro S.A. (ADR)",
+          "sector": "Energy",
+          "region": "EM",
+          "weight": 0.115
         },
         {
           "ticker": "HSBC",
           "name": "HSBC Holdings plc (ADR)",
           "sector": "Financials",
           "region": "EU",
-          "weight": 0.0273
+          "weight": 0.0936
         },
         {
-          "ticker": "NOK",
-          "name": "Nokia Corporation (ADR)",
-          "sector": "Information Technology",
+          "ticker": "RHHBY",
+          "name": "Roche Holding AG (ADR)",
+          "sector": "Health Care",
           "region": "EU",
-          "weight": 0.0203
+          "weight": 0.0872
         },
         {
-          "ticker": "TTE",
-          "name": "TotalEnergies SE (ADR)",
+          "ticker": "BUD",
+          "name": "Anheuser-Busch InBev SA/NV (ADR)",
+          "sector": "Consumer Staples",
+          "region": "EU",
+          "weight": 0.0812
+        },
+        {
+          "ticker": "005930.KS",
+          "name": "Samsung Electronics Co. Ltd.",
+          "sector": "Information Technology",
+          "region": "APAC",
+          "weight": 0.0759
+        },
+        {
+          "ticker": "E",
+          "name": "Eni S.p.A. (ADR)",
           "sector": "Energy",
           "region": "EU",
-          "weight": 0.0167
+          "weight": 0.0702
+        },
+        {
+          "ticker": "2222.SR",
+          "name": "Saudi Arabian Oil Co. (Aramco)",
+          "sector": "Energy",
+          "region": "EM",
+          "weight": 0.0586
         },
         {
           "ticker": "ASML",
           "name": "ASML Holding N.V. (ADR)",
           "sector": "Information Technology",
           "region": "EU",
-          "weight": 0
+          "weight": 0.0287
         },
         {
-          "ticker": "INFY",
-          "name": "Infosys Ltd (ADR)",
+          "ticker": "GSK",
+          "name": "GSK plc (ADR)",
+          "sector": "Health Care",
+          "region": "EU",
+          "weight": 0.0284
+        },
+        {
+          "ticker": "SAP",
+          "name": "SAP SE (ADR)",
           "sector": "Information Technology",
-          "region": "EM",
+          "region": "EU",
           "weight": 0
         },
         {
@@ -1513,20 +1492,41 @@
           "sector": "Health Care",
           "region": "EU",
           "weight": 0
+        },
+        {
+          "ticker": "NVS",
+          "name": "Novartis AG (ADR)",
+          "sector": "Health Care",
+          "region": "EU",
+          "weight": 0
+        },
+        {
+          "ticker": "UBS",
+          "name": "UBS Group AG",
+          "sector": "Financials",
+          "region": "EU",
+          "weight": 0
+        },
+        {
+          "ticker": "DB",
+          "name": "Deutsche Bank AG (ADR)",
+          "sector": "Financials",
+          "region": "EU",
+          "weight": 0
         }
       ],
       "stats": {
-        "expected_return": 0.6067,
-        "volatility": 0.123,
-        "sharpe": 4.568,
-        "max_drawdown": -0.246,
-        "beta": 0.68
+        "expected_return": 0.6787,
+        "volatility": 0.1343,
+        "sharpe": 4.717,
+        "max_drawdown": -0.269,
+        "beta": 0.75
       },
       "region_split": {
         "US": 0,
-        "EU": 0.7955,
-        "APAC": 0.1067,
-        "EM": 0.0978
+        "EU": 0.7505,
+        "APAC": 0.0759,
+        "EM": 0.1736
       }
     },
     "quality": {
