@@ -1,6 +1,6 @@
 {
   "v": 1,
-  "generatedAt": "2026-11-24T10:44:48.062Z",
+  "generatedAt": "2026-11-25T01:17:12.865Z",
   "assets": {
     "005930.KS": {
       "fetchedAt": "2026-07-29T06:05:53.105Z",
@@ -119174,7 +119174,6 @@
     ],
     "failed": [
       "AJINY",
-      "ANSS",
       "ANZBY",
       "AXISY",
       "BMWYY",
@@ -119199,7 +119198,7 @@
       "LLOY"
     ],
     "requested": 24,
-    "succeeded": 0,
+    "succeeded": 1,
     "source": "Yahoo Finance via Aurum proxy"
   }
 }
