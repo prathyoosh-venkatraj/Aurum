@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-11-25",
+    "generated": "2026-11-26",
     "refresh_frequency": "weekly",
     "universe_version": "1.0.0",
     "universe_count": 500,
@@ -1548,105 +1548,112 @@
           "name": "Visa Inc.",
           "sector": "Financials",
           "region": "US",
-          "weight": 0.1337
-        },
-        {
-          "ticker": "IBE.MC",
-          "name": "Iberdrola S.A.",
-          "sector": "Utilities",
-          "region": "EU",
-          "weight": 0.1337
-        },
-        {
-          "ticker": "AAPL",
-          "name": "Apple Inc.",
-          "sector": "Information Technology",
-          "region": "US",
-          "weight": 0.1335
-        },
-        {
-          "ticker": "XOM",
-          "name": "Exxon Mobil Corporation",
-          "sector": "Energy",
-          "region": "US",
-          "weight": 0.0884
-        },
-        {
-          "ticker": "2222.SR",
-          "name": "Saudi Arabian Oil Co. (Aramco)",
-          "sector": "Energy",
-          "region": "EM",
-          "weight": 0.0884
-        },
-        {
-          "ticker": "005930.KS",
-          "name": "Samsung Electronics Co. Ltd.",
-          "sector": "Information Technology",
-          "region": "APAC",
-          "weight": 0.0745
+          "weight": 0.1353
         },
         {
           "ticker": "LIN",
           "name": "Linde plc",
           "sector": "Materials",
           "region": "EU",
-          "weight": 0.0652
+          "weight": 0.1353
         },
         {
-          "ticker": "WMT",
-          "name": "Walmart Inc.",
-          "sector": "Consumer Staples",
-          "region": "US",
-          "weight": 0.0638
-        },
-        {
-          "ticker": "BRK-B",
-          "name": "Berkshire Hathaway Inc. Class B",
-          "sector": "Financials",
-          "region": "US",
-          "weight": 0.0571
-        },
-        {
-          "ticker": "SHEL",
-          "name": "Shell plc (ADR)",
-          "sector": "Energy",
+          "ticker": "IBE.MC",
+          "name": "Iberdrola S.A.",
+          "sector": "Utilities",
           "region": "EU",
-          "weight": 0.0459
+          "weight": 0.1353
         },
         {
-          "ticker": "AMZN",
-          "name": "Amazon.com Inc.",
-          "sector": "Consumer Discretionary",
+          "ticker": "AAPL",
+          "name": "Apple Inc.",
+          "sector": "Information Technology",
           "region": "US",
-          "weight": 0.0452
+          "weight": 0.1256
         },
         {
-          "ticker": "LLY",
-          "name": "Eli Lilly and Company",
-          "sector": "Health Care",
+          "ticker": "XOM",
+          "name": "Exxon Mobil Corporation",
+          "sector": "Energy",
           "region": "US",
-          "weight": 0.0358
+          "weight": 0.0866
+        },
+        {
+          "ticker": "2222.SR",
+          "name": "Saudi Arabian Oil Co. (Aramco)",
+          "sector": "Energy",
+          "region": "EM",
+          "weight": 0.0866
+        },
+        {
+          "ticker": "005930.KS",
+          "name": "Samsung Electronics Co. Ltd.",
+          "sector": "Information Technology",
+          "region": "APAC",
+          "weight": 0.0659
         },
         {
           "ticker": "RHHBY",
           "name": "Roche Holding AG (ADR)",
           "sector": "Health Care",
           "region": "EU",
-          "weight": 0.0229
+          "weight": 0.0585
+        },
+        {
+          "ticker": "SHEL",
+          "name": "Shell plc (ADR)",
+          "sector": "Energy",
+          "region": "EU",
+          "weight": 0.0522
+        },
+        {
+          "ticker": "WMT",
+          "name": "Walmart Inc.",
+          "sector": "Consumer Staples",
+          "region": "US",
+          "weight": 0.028
+        },
+        {
+          "ticker": "BRK-B",
+          "name": "Berkshire Hathaway Inc. Class B",
+          "sector": "Financials",
+          "region": "US",
+          "weight": 0.0247
         },
         {
           "ticker": "TSM",
           "name": "Taiwan Semiconductor Mfg. (ADR)",
           "sector": "Information Technology",
           "region": "APAC",
-          "weight": 0.0114
+          "weight": 0.0186
         },
         {
           "ticker": "PG",
           "name": "The Procter & Gamble Company",
           "sector": "Consumer Staples",
           "region": "US",
-          "weight": 0.0004
+          "weight": 0.0168
+        },
+        {
+          "ticker": "COST",
+          "name": "Costco Wholesale Corporation",
+          "sector": "Consumer Staples",
+          "region": "US",
+          "weight": 0.0123
+        },
+        {
+          "ticker": "LLY",
+          "name": "Eli Lilly and Company",
+          "sector": "Health Care",
+          "region": "US",
+          "weight": 0.0096
+        },
+        {
+          "ticker": "AMZN",
+          "name": "Amazon.com Inc.",
+          "sector": "Consumer Discretionary",
+          "region": "US",
+          "weight": 0.0088
         },
         {
           "ticker": "MSFT",
@@ -1675,27 +1682,20 @@
           "sector": "Health Care",
           "region": "US",
           "weight": 0
-        },
-        {
-          "ticker": "NVO",
-          "name": "Novo Nordisk A/S (ADR)",
-          "sector": "Health Care",
-          "region": "EU",
-          "weight": 0
         }
       ],
       "stats": {
-        "expected_return": 0.3802,
-        "volatility": 0.0963,
-        "sharpe": 3.482,
-        "max_drawdown": -0.193,
-        "beta": 0.53
+        "expected_return": 0.3591,
+        "volatility": 0.0994,
+        "sharpe": 3.16,
+        "max_drawdown": -0.199,
+        "beta": 0.55
       },
       "region_split": {
-        "US": 0.5579,
-        "EU": 0.2677,
-        "APAC": 0.0859,
-        "EM": 0.0884
+        "US": 0.4476,
+        "EU": 0.3812,
+        "APAC": 0.0846,
+        "EM": 0.0866
       }
     },
     "value": {
@@ -1717,152 +1717,152 @@
           "name": "The Coca-Cola Company",
           "sector": "Consumer Staples",
           "region": "US",
-          "weight": 0.1431
-        },
-        {
-          "ticker": "CF",
-          "name": "CF Industries Holdings Inc.",
-          "sector": "Materials",
-          "region": "US",
-          "weight": 0.1341
-        },
-        {
-          "ticker": "MO",
-          "name": "Altria Group Inc.",
-          "sector": "Consumer Staples",
-          "region": "US",
-          "weight": 0.1201
+          "weight": 0.1332
         },
         {
           "ticker": "CB",
           "name": "Chubb Limited",
           "sector": "Financials",
           "region": "US",
-          "weight": 0.0979
+          "weight": 0.1074
         },
         {
           "ticker": "TD",
           "name": "Toronto-Dominion Bank",
           "sector": "Financials",
           "region": "US",
-          "weight": 0.0979
+          "weight": 0.1074
+        },
+        {
+          "ticker": "WMB",
+          "name": "The Williams Companies Inc.",
+          "sector": "Energy",
+          "region": "US",
+          "weight": 0.0889
+        },
+        {
+          "ticker": "HSY",
+          "name": "The Hershey Company",
+          "sector": "Consumer Staples",
+          "region": "US",
+          "weight": 0.0742
+        },
+        {
+          "ticker": "REP.MC",
+          "name": "Repsol S.A.",
+          "sector": "Energy",
+          "region": "EU",
+          "weight": 0.0689
         },
         {
           "ticker": "UBS",
           "name": "UBS Group AG",
           "sector": "Financials",
           "region": "EU",
-          "weight": 0.0613
+          "weight": 0.0684
         },
         {
-          "ticker": "PEP",
-          "name": "PepsiCo Inc.",
-          "sector": "Consumer Staples",
+          "ticker": "CF",
+          "name": "CF Industries Holdings Inc.",
+          "sector": "Materials",
           "region": "US",
-          "weight": 0.0579
+          "weight": 0.051
         },
         {
-          "ticker": "GS",
-          "name": "The Goldman Sachs Group Inc.",
-          "sector": "Financials",
+          "ticker": "EOG",
+          "name": "EOG Resources Inc.",
+          "sector": "Energy",
           "region": "US",
-          "weight": 0.0572
+          "weight": 0.0433
         },
         {
-          "ticker": "SCHW",
-          "name": "The Charles Schwab Corporation",
-          "sector": "Financials",
+          "ticker": "ECL",
+          "name": "Ecolab Inc.",
+          "sector": "Materials",
           "region": "US",
-          "weight": 0.0435
-        },
-        {
-          "ticker": "CL",
-          "name": "Colgate-Palmolive Company",
-          "sector": "Consumer Staples",
-          "region": "US",
-          "weight": 0.0387
+          "weight": 0.0424
         },
         {
           "ticker": "MS",
           "name": "Morgan Stanley",
           "sector": "Financials",
           "region": "US",
-          "weight": 0.033
+          "weight": 0.0356
         },
         {
-          "ticker": "FCX",
-          "name": "Freeport-McMoRan Inc.",
+          "ticker": "DD",
+          "name": "DuPont de Nemours Inc.",
           "sector": "Materials",
           "region": "US",
-          "weight": 0.0245
+          "weight": 0.0324
         },
         {
-          "ticker": "DEO",
-          "name": "Diageo plc (ADR)",
-          "sector": "Consumer Staples",
-          "region": "EU",
-          "weight": 0.0241
-        },
-        {
-          "ticker": "SPGI",
-          "name": "S&P Global Inc.",
+          "ticker": "AXP",
+          "name": "American Express Company",
           "sector": "Financials",
           "region": "US",
-          "weight": 0.0193
+          "weight": 0.0246
+        },
+        {
+          "ticker": "SCHW",
+          "name": "The Charles Schwab Corporation",
+          "sector": "Financials",
+          "region": "US",
+          "weight": 0.0228
+        },
+        {
+          "ticker": "TTE",
+          "name": "TotalEnergies SE (ADR)",
+          "sector": "Energy",
+          "region": "EU",
+          "weight": 0.0183
         },
         {
           "ticker": "KR",
           "name": "The Kroger Co.",
           "sector": "Consumer Staples",
           "region": "US",
-          "weight": 0.0146
+          "weight": 0.0176
+        },
+        {
+          "ticker": "SPGI",
+          "name": "S&P Global Inc.",
+          "sector": "Financials",
+          "region": "US",
+          "weight": 0.0168
+        },
+        {
+          "ticker": "CL",
+          "name": "Colgate-Palmolive Company",
+          "sector": "Consumer Staples",
+          "region": "US",
+          "weight": 0.0165
         },
         {
           "ticker": "ALB",
           "name": "Albemarle Corporation",
           "sector": "Materials",
           "region": "US",
-          "weight": 0.013
+          "weight": 0.0153
         },
         {
-          "ticker": "DOW",
-          "name": "Dow Inc.",
-          "sector": "Materials",
-          "region": "US",
-          "weight": 0.0078
-        },
-        {
-          "ticker": "ICE",
-          "name": "Intercontinental Exchange Inc.",
-          "sector": "Financials",
-          "region": "US",
-          "weight": 0.0073
-        },
-        {
-          "ticker": "UL",
-          "name": "Unilever PLC (ADR)",
+          "ticker": "MO",
+          "name": "Altria Group Inc.",
           "sector": "Consumer Staples",
-          "region": "EU",
-          "weight": 0.0047
-        },
-        {
-          "ticker": "BAC",
-          "name": "Bank of America Corporation",
-          "sector": "Financials",
           "region": "US",
-          "weight": 0
+          "weight": 0.0151
         }
       ],
       "stats": {
-        "expected_return": 0.2333,
-        "volatility": 0.1057,
-        "sharpe": 1.781,
-        "max_drawdown": -0.211,
-        "beta": 0.59
+        "expected_return": 0.2381,
+        "volatility": 0.0946,
+        "sharpe": 2.04,
+        "max_drawdown": -0.189,
+        "beta": 0.53
       },
       "region_split": {
-        "US": 0.9099,
-        "EU": 0.0901,
+        "US": 0.8444,
+        "EU": 0.1556,
         "APAC": 0,
         "EM": 0
       }
